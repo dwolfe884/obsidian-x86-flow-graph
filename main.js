@@ -74,12 +74,41 @@ var MyPlugin = class extends import_obsidian.Plugin {
       }
     });
     this.addCommand({
-      id: "create-file",
-      name: "Sample create file command",
+      id: "create-flow-diagram",
+      name: "Convert x86 assembly into a flow diagram on a canvas",
       editorCallback: (editor, view) => {
         console.log(editor.getSelection());
         console.log(this.app.vault.getName());
-        this.app.vault.create("./testing.md", editor.getSelection());
+        let nodes = [];
+        var tmp = editor.getSelection().split("\n");
+        let lines = [];
+        var nodeid = 1;
+        var workingx = 0;
+        var workingy = 0;
+        tmp.forEach((element) => {
+          if (element != "") {
+            lines.push(element);
+          }
+        });
+        var currnode = "```\n";
+        lines.forEach((line, linenum) => {
+          console.log(line);
+          if (line.split("")[0] == "	" || line.split("")[0] == " ") {
+            if (line.trim().split("")[0] == "j") {
+              currnode = currnode + line + "```";
+              nodes.push({ "id": nodeid, "x": workingx, "y": workingy, "width": 250, "height": 300, "type": "text", "text": currnode });
+              nodeid = nodeid + 1;
+              workingy = workingy + 350;
+              currnode = "```\n";
+            } else {
+              currnode = currnode + line + "\n";
+            }
+          } else {
+          }
+        });
+        var thing = '{ "nodes":' + JSON.stringify(nodes) + "}";
+        console.log(thing);
+        this.app.vault.create("./testing.canvas", thing);
       }
     });
     this.addCommand({

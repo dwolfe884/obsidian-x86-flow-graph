@@ -75,7 +75,41 @@ export default class MyPlugin extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				console.log(editor.getSelection());
 				console.log(this.app.vault.getName());
-				this.app.vault.create("./testing.md",editor.getSelection())
+				let nodes: { id: number; x: number; y: number; width: number; height: number; type: string; text: string; }[] = []
+				var tmp = editor.getSelection().split("\n")
+				let lines: string[] = []
+				var nodeid = 1;
+				var workingx = 0;
+				var workingy = 0;
+				tmp.forEach(element => {
+					if(element != ""){
+						lines.push(element)
+					}
+				});
+
+				var currnode = "```\n"
+
+				lines.forEach((line,linenum) => {
+					console.log(line)
+					if(line.split("")[0] == '\t' || line.split("")[0] == " "){
+						if(line.trim().split("")[0] == 'j'){
+							currnode = currnode + line + "\n```"
+							nodes.push({"id":nodeid, "x": workingx, "y": workingy, "width": 250,"height": 300, "type": "text", "text": currnode})
+							nodeid = nodeid + 1
+							workingy = workingy + 350
+							currnode = "```\n"
+						}
+						else{
+							currnode = currnode + line + "\n"
+						}
+					}
+					else{
+						//TODO: Handle location lines
+					}
+				});
+				var thing = "{ \"nodes\":"+JSON.stringify(nodes) + "}"
+				console.log(thing)
+				this.app.vault.create("./testing.canvas",thing)
 			}
 		});
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
