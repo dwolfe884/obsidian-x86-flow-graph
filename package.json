@@ -1,0 +1,30 @@
+{
+	"name": "obsidian-file-color-plugin",
+	"version": "1.0.2",
+	"description": "An Obsidian (https://obsidian.md) plugin for setting colors on folders and files in the file tree.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [],
+	"author": "ecustic",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^16.11.6",
+		"@typescript-eslint/eslint-plugin": "5.29.0",
+		"@typescript-eslint/parser": "5.29.0",
+		"builtin-modules": "3.3.0",
+		"esbuild": "0.14.47",
+		"eslint": "^8.29.0",
+		"eslint-config-prettier": "^8.5.0",
+		"obsidian": "latest",
+		"prettier": "^2.8.1",
+		"tslib": "2.4.0",
+		"typescript": "4.7.4"
+	},
+	"dependencies": {
+		"nanoid": "^4.0.0"
+	}
+}
