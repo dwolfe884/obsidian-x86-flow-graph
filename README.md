@@ -56,7 +56,7 @@ TODO: Add GIF of running plugin
 ## Roadmap
 
 ### TODO:
-- [ ] Add true/false labels to edges
+- [x] Add true/false labels to edges
 - [ ] Handle \`\`\` characters on both sides of selected text
 - [ ] Move nodes to left or right to increase readbility 
 - [ ] Test, test, test...
