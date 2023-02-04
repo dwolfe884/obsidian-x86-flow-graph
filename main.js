@@ -60,6 +60,8 @@ var MyPlugin = class extends import_obsidian.Plugin {
         nodes = [];
         nodes = [];
         edges = [];
+        visitslocs = {};
+        locations = {};
         nodeid = 1;
         edgeid = 5555;
         workingx = 0;
@@ -142,17 +144,19 @@ function generatenodes(linenum, text, fromnode2) {
   console.log(locations);
   var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2);
   var newnode = retarray[0];
-  fromnode2 = newnode["id"];
-  console.log("fromnode is " + fromnode2);
   var whereto = retarray[1];
-  var wegood = nodeAlredyAdded(newnode);
-  if (wegood) {
-    return;
-  } else {
-    nodes.push(newnode);
+  if (newnode != null) {
+    fromnode2 = newnode["id"];
+    console.log("fromnode is " + fromnode2);
+    var wegood = nodeAlredyAdded(newnode);
+    if (wegood) {
+      return;
+    } else {
+      nodes.push(newnode);
+    }
+    console.log('{ "nodes":' + JSON.stringify(nodes) + "}");
+    console.log("need to jump here: " + whereto);
   }
-  console.log('{ "nodes":' + JSON.stringify(nodes) + "}");
-  console.log("need to jump here: " + whereto);
   if (whereto == "fin") {
     return;
   }
@@ -209,18 +213,24 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
         currnode = currnode + line + "\n";
         visitslocs[line.trim()] = nodeid;
       } else {
-        currnode = currnode + "\n```";
-        newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
-        workingy = workingy + 350;
-        if (fromnode2 != -1) {
-          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+        if (currnode == "```\n") {
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
           edges.push(newedge);
           edgeid = edgeid + 1;
-          newedge = { "id": edgeid, "fromNode": nodeid, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
-          edges.push(newedge);
-          edgeid = edgeid + 1;
+        } else {
+          currnode = currnode + "\n```";
+          newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+          workingy = workingy + 350;
+          if (fromnode2 != -1) {
+            newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+            edges.push(newedge);
+            edgeid = edgeid + 1;
+            newedge = { "id": edgeid, "fromNode": nodeid, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
+            edges.push(newedge);
+            edgeid = edgeid + 1;
+          }
+          nodeid = nodeid + 1;
         }
-        nodeid = nodeid + 1;
         i = text.length + 20;
         jmploc = "fin";
       }

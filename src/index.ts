@@ -89,6 +89,8 @@ export default class MyPlugin extends Plugin {
 				nodes = [];
 				nodes = [];
 				edges = [];
+				visitslocs = {};
+				locations = {};
 				nodeid = 1;
 				edgeid = 5555;
 				workingx = 0;
@@ -210,20 +212,22 @@ function generatenodes(linenum: any, text: any, fromnode: any){
     console.log(locations)
     var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode)
     var newnode: any = retarray[0]
-    fromnode = newnode['id']
-    console.log("fromnode is " + fromnode)
-    var whereto: any = retarray[1]
-    //Check if node is already in list
-    var wegood = nodeAlredyAdded(newnode)
-    if(wegood){
-        return
-    }
-    else{
-        nodes.push(newnode)
-    }
-    console.log("{ \"nodes\":"+JSON.stringify(nodes) + "}")
-    console.log("need to jump here: " + whereto)
-    //We are at the end of the file
+	var whereto: any = retarray[1]
+	if(newnode != null){
+		fromnode = newnode['id']
+		console.log("fromnode is " + fromnode)
+		//Check if node is already in list
+		var wegood = nodeAlredyAdded(newnode)
+		if(wegood){
+			return
+		}
+		else{
+			nodes.push(newnode)
+		}
+		console.log("{ \"nodes\":"+JSON.stringify(nodes) + "}")
+		console.log("need to jump here: " + whereto)
+		//We are at the end of the file
+	}
     if(whereto == "fin"){
         return
     }
@@ -292,19 +296,26 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
                 visitslocs[line.trim()] = nodeid
             }
             else{
-                currnode = currnode + "\n```"
-                newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-                workingy = workingy + 350
-                if(fromnode != -1){
-                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+				if(currnode == "```\n"){
+					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
                     edges.push(newedge)
                     edgeid = edgeid + 1
-                    newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
-                    edges.push(newedge)
-                    edgeid = edgeid + 1
-                }
-                nodeid = nodeid + 1
-                i = text.length+20
+				}
+				else{
+					currnode = currnode + "\n```"
+					newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+					workingy = workingy + 350
+					if(fromnode != -1){
+						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+						edges.push(newedge)
+						edgeid = edgeid + 1
+						newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+						edges.push(newedge)
+						edgeid = edgeid + 1
+					}
+					nodeid = nodeid + 1
+				}
+				i = text.length+20
                 jmploc = "fin"
             }
         }
