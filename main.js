@@ -28,6 +28,16 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 var import_obsidian = require("obsidian");
+var nodeid = 1;
+var edgeid = 5555;
+var workingx = 0;
+var workingy = 0;
+var nodes = [];
+var edges = [];
+var lines = [];
+var fromnode = -1;
+var locations = {};
+var visitslocs = {};
 var DEFAULT_SETTINGS = {
   mySetting: "default"
 };
@@ -41,74 +51,37 @@ var MyPlugin = class extends import_obsidian.Plugin {
     const statusBarItemEl = this.addStatusBarItem();
     statusBarItemEl.setText("Status Bar Text");
     this.addCommand({
-      id: "run-x86-parser",
-      name: "Parse x86 Codeblocks",
-      callback: () => {
-        var tmp = document.getElementsByClassName("HyperMD-codeblock-begin-bg");
-        for (var i = 0; i < tmp.length; i++) {
-          if (tmp[i].innerHTML.contains("x86")) {
-            tmp[i].classList.add("x86-instruction");
-            var currelement = tmp[i];
-            while (!currelement.classList.value.contains("HyperMD-codeblock-end")) {
-              currelement.classList.add("x86-instruction");
-              if (currelement.nextElementSibling != null) {
-                currelement = currelement.nextElementSibling;
-                if (currelement.classList.value.contains("HyperMD-codeblock-end")) {
-                  break;
-                }
-              } else {
-                console.log("end of document reached before end of codeblock");
-                break;
-              }
-              var orightml = currelement.innerHTML;
-              var innerpart = orightml.split(">")[1].split("<")[0];
-              var firstspace = innerpart.indexOf(" ");
-              var innerpart = '<span class="cm-hmd-codeblock x86-instruction">' + innerpart.split(" ")[0] + "</span>" + innerpart.slice(firstspace, innerpart.length);
-              var testing = orightml.split(">")[0] + ">" + innerpart + "<" + orightml.split(">")[1].split("<")[1];
-              currelement.innerHTML = testing;
-              console.log(currelement.innerHTML);
-            }
-            console.log("Done with that x86 codeblock");
-          }
-        }
-      }
-    });
-    this.addCommand({
       id: "create-flow-diagram",
       name: "Convert x86 assembly into a flow diagram on a canvas",
       editorCallback: (editor, view) => {
         console.log(editor.getSelection());
         console.log(this.app.vault.getName());
-        let nodes = [];
+        lines = [];
+        nodes = [];
+        nodes = [];
+        edges = [];
+        nodeid = 1;
+        edgeid = 5555;
+        workingx = 0;
+        workingy = 0;
         var tmp = editor.getSelection().split("\n");
-        let lines = [];
-        var nodeid = 1;
-        var workingx = 0;
-        var workingy = 0;
         tmp.forEach((element) => {
           if (element != "") {
             lines.push(element);
           }
         });
-        var currnode = "```\n";
         lines.forEach((line, linenum) => {
-          console.log(line);
-          if (line.split("")[0] == "	" || line.split("")[0] == " ") {
-            if (line.trim().split("")[0] == "j") {
-              currnode = currnode + line + "```";
-              nodes.push({ "id": nodeid, "x": workingx, "y": workingy, "width": 250, "height": 300, "type": "text", "text": currnode });
-              nodeid = nodeid + 1;
-              workingy = workingy + 350;
-              currnode = "```\n";
-            } else {
-              currnode = currnode + line + "\n";
+          if (line.split("")[0] != "	" && line.split("")[0] != " ") {
+            var newkey = line.trim().split("#")[0].trim();
+            if (!locations[newkey]) {
+              locations[newkey] = linenum;
+              visitslocs[newkey] = 0;
             }
-          } else {
           }
         });
-        var thing = '{ "nodes":' + JSON.stringify(nodes) + "}";
-        console.log(thing);
-        this.app.vault.create("./testing.canvas", thing);
+        generatenodes(0, lines, fromnode);
+        this.app.vault.create("/pleasegod.canvas", '{ "nodes":' + JSON.stringify(nodes) + ',"edges":' + JSON.stringify(edges) + "}");
+        console.log('{ "nodes":' + JSON.stringify(nodes) + ',"edges":' + JSON.stringify(edges) + "}");
       }
     });
     this.addCommand({
@@ -125,9 +98,6 @@ var MyPlugin = class extends import_obsidian.Plugin {
       }
     });
     this.addSettingTab(new SampleSettingTab(this.app, this));
-    this.registerDomEvent(document, "click", (evt) => {
-      console.log("click1", evt);
-    });
     this.registerInterval(window.setInterval(() => console.log("setInterval"), 5 * 60 * 1e3));
   }
   onunload() {
@@ -168,3 +138,106 @@ var SampleSettingTab = class extends import_obsidian.PluginSettingTab {
     }));
   }
 };
+function generatenodes(linenum, text, fromnode2) {
+  console.log(locations);
+  var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2);
+  var newnode = retarray[0];
+  fromnode2 = newnode["id"];
+  console.log("fromnode is " + fromnode2);
+  var whereto = retarray[1];
+  var wegood = nodeAlredyAdded(newnode);
+  if (wegood) {
+    return;
+  } else {
+    nodes.push(newnode);
+  }
+  console.log('{ "nodes":' + JSON.stringify(nodes) + "}");
+  console.log("need to jump here: " + whereto);
+  if (whereto == "fin") {
+    return;
+  }
+  generatenodes(locations[whereto[0]], text, fromnode2);
+  if (whereto.length == 2) {
+    console.log("Oh boy, we at a split");
+    console.log("going to line: " + whereto[1]);
+    generatenodes(whereto[1], text, fromnode2);
+  }
+  return;
+}
+function nodeAlredyAdded(checknode) {
+  var retval = false;
+  nodes.forEach((node) => {
+    if (checknode["startline"] == node["startline"] && checknode["endline"] == node["endline"]) {
+      retval = true;
+    }
+  });
+  return retval;
+}
+function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
+  var currnode = "```\n";
+  var i = linenum;
+  var newnode;
+  var jmploc;
+  var newedge = {};
+  console.log("curr line: " + i);
+  while (i < text.length) {
+    var line = text[i];
+    console.log("currently processing this line: " + line);
+    if (line.split("")[0] == "	" || line.split("")[0] == " ") {
+      if (line.trim().split("")[0] == "j") {
+        currnode = currnode + line + "\n```";
+        newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+        nodeid = nodeid + 1;
+        workingy = workingy + 350;
+        console.log(line.trim().slice(0, 3));
+        if (fromnode2 != -1) {
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+          edges.push(newedge);
+          edgeid = edgeid + 1;
+        }
+        if (line.trim().slice(0, 3) == "jmp") {
+          jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
+        } else {
+          jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim(), i + 1];
+        }
+        i = text.length + 20;
+      } else {
+        currnode = currnode + line + "\n";
+      }
+    } else {
+      if (visitslocs[line.trim()] == 0) {
+        currnode = currnode + line + "\n";
+        visitslocs[line.trim()] = nodeid;
+      } else {
+        currnode = currnode + "\n```";
+        newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+        workingy = workingy + 350;
+        if (fromnode2 != -1) {
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+          edges.push(newedge);
+          edgeid = edgeid + 1;
+          newedge = { "id": edgeid, "fromNode": nodeid, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
+          edges.push(newedge);
+          edgeid = edgeid + 1;
+        }
+        nodeid = nodeid + 1;
+        i = text.length + 20;
+        jmploc = "fin";
+      }
+    }
+    i = i + 1;
+  }
+  if (i != text.length + 21) {
+    currnode = currnode + "```";
+    newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+    jmploc = "fin";
+    nodeid = nodeid + 1;
+    workingy = workingy + 350;
+    if (fromnode2 != -1) {
+      newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+      edges.push(newedge);
+      edgeid = edgeid + 1;
+    }
+  }
+  return [newnode, jmploc];
+}

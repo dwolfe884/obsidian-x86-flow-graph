@@ -25,6 +25,8 @@ var edges = [] //{"id":"d1e0d15da69178a9","fromNode":"4018052da21dde12","fromSid
 var tmp = input.split("\n")
 var lines = []
 var fromnode = -1
+var locations = {}
+var visitslocs = {}
 //Recursive function to visit each node and generate the other nodes
 //Returns when it either hits the end of the assembly or returns to a node that has already been added
 function generatenodes(linenum, text, fromnode){
@@ -80,7 +82,7 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode) {
     while(i < text.length){
         var line = text[i]
         console.log("currently processing this line: " + line)
-        //if(line.split("")[0] == '\t' || line.split("")[0] == " "){
+        if(line.split("")[0] == '\t' || line.split("")[0] == " "){
             if(line.trim().split("")[0] == 'j'){
                 currnode = currnode + line + "\n```"
                 newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
@@ -104,10 +106,30 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode) {
             else{
                 currnode = currnode + line + "\n"
             }
-        /*}
+        }
         else{
             //TODO: Handle location lines
-        }*/
+            if(visitslocs[line.trim()] == 0){
+                currnode = currnode + line + "\n"
+                visitslocs[line.trim()] = nodeid
+            }
+            else{
+                currnode = currnode + "\n```"
+                newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+                workingy = workingy + 350
+                if(fromnode != -1){
+                    var newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+                    edges.push(newedge)
+                    edgeid = edgeid + 1
+                    var newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+                    edges.push(newedge)
+                    edgeid = edgeid + 1
+                }
+                nodeid = nodeid + 1
+                i = text.length+20
+                jmploc = "fin"
+            }
+        }
         i = i + 1
     }
     //We got to the end of the assembly
@@ -136,8 +158,6 @@ function starter() {
         }
     });
 
-    locations = {}
-
     lines.forEach((line,linenum) => {
         //Only look at lines that could be locations
         if(line.split("")[0] != '\t' && line.split("")[0] != " "){
@@ -145,6 +165,7 @@ function starter() {
             var newkey = line.trim().split("#")[0].trim()
             if (!locations[newkey]) {
                 locations[newkey] = linenum;
+                visitslocs[newkey] = 0
             }
         }
     });

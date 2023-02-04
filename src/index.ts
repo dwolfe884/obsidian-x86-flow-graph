@@ -1,6 +1,16 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, Vault } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
+var nodeid = 1;
+var edgeid = 5555
+var workingx = 0;
+var workingy = 0;
+var nodes: any[] = []
+var edges: { id: number; fromNode: any; fromSide: string; toNode: number; toSide: string; label: string; }[] = [] //{"id":"d1e0d15da69178a9","fromNode":"4018052da21dde12","fromSide":"bottom","toNode":"0afaa4e14a75cfe1","toSide":"top","label":"false"}
+var lines: string[] = []
+var fromnode = -1
+var locations: any = {}
+var visitslocs: any = {}
 
 interface MyPluginSettings {
 	mySetting: string;
@@ -29,7 +39,7 @@ export default class MyPlugin extends Plugin {
 		statusBarItemEl.setText('Status Bar Text');
 
 		// This adds a simple command that can be triggered anywhere
-		this.addCommand({
+		/*this.addCommand({
 			id: 'run-x86-parser',
 			name: 'Parse x86 Codeblocks',
 			callback: () => {
@@ -67,7 +77,7 @@ export default class MyPlugin extends Plugin {
 				}
 			}
 			}
-		});
+		});*/
 		// This adds an editor command that can perform some operation on the current editor instance
 		this.addCommand({
 			id: 'create-flow-diagram',
@@ -75,41 +85,35 @@ export default class MyPlugin extends Plugin {
 			editorCallback: (editor: Editor, view: MarkdownView) => {
 				console.log(editor.getSelection());
 				console.log(this.app.vault.getName());
-				let nodes: { id: number; x: number; y: number; width: number; height: number; type: string; text: string; }[] = []
+				lines = [];
+				nodes = [];
+				nodes = [];
+				edges = [];
+				nodeid = 1;
+				edgeid = 5555;
+				workingx = 0;
+				workingy = 0;
 				var tmp = editor.getSelection().split("\n")
-				let lines: string[] = []
-				var nodeid = 1;
-				var workingx = 0;
-				var workingy = 0;
 				tmp.forEach(element => {
 					if(element != ""){
 						lines.push(element)
 					}
 				});
-
-				var currnode = "```\n"
-
+			
 				lines.forEach((line,linenum) => {
-					console.log(line)
-					if(line.split("")[0] == '\t' || line.split("")[0] == " "){
-						if(line.trim().split("")[0] == 'j'){
-							currnode = currnode + line + "\n```"
-							nodes.push({"id":nodeid, "x": workingx, "y": workingy, "width": 250,"height": 300, "type": "text", "text": currnode})
-							nodeid = nodeid + 1
-							workingy = workingy + 350
-							currnode = "```\n"
+					//Only look at lines that could be locations
+					if(line.split("")[0] != '\t' && line.split("")[0] != " "){
+						//Cut out white space and comments (#)
+						var newkey = line.trim().split("#")[0].trim()
+						if (!locations[newkey]) {
+							locations[newkey] = linenum;
+							visitslocs[newkey] = 0
 						}
-						else{
-							currnode = currnode + line + "\n"
-						}
-					}
-					else{
-						//TODO: Handle location lines
 					}
 				});
-				var thing = "{ \"nodes\":"+JSON.stringify(nodes) + "}"
-				console.log(thing)
-				this.app.vault.create("./testing.canvas",thing)
+				generatenodes(0,lines,fromnode)
+				this.app.vault.create("/pleasegod.canvas","{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
+				console.log("{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
 			}
 		});
 		// This adds a complex command that can check whether the current state of the app allows execution of the command
@@ -137,9 +141,9 @@ export default class MyPlugin extends Plugin {
 
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click1', evt);
-		});
+		//this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+		//	console.log('click1', evt);
+		//});
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
@@ -201,4 +205,124 @@ class SampleSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 	}
+}
+function generatenodes(linenum: any, text: any, fromnode: any){
+    console.log(locations)
+    var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode)
+    var newnode: any = retarray[0]
+    fromnode = newnode['id']
+    console.log("fromnode is " + fromnode)
+    var whereto: any = retarray[1]
+    //Check if node is already in list
+    var wegood = nodeAlredyAdded(newnode)
+    if(wegood){
+        return
+    }
+    else{
+        nodes.push(newnode)
+    }
+    console.log("{ \"nodes\":"+JSON.stringify(nodes) + "}")
+    console.log("need to jump here: " + whereto)
+    //We are at the end of the file
+    if(whereto == "fin"){
+        return
+    }
+    generatenodes(locations[whereto[0]], text, fromnode)
+    if(whereto.length == 2){
+        console.log("Oh boy, we at a split")
+        console.log("going to line: " + whereto[1])
+        generatenodes(whereto[1], text, fromnode)
+    }
+    return
+}
+
+//This function returns true if the node has already been added to the nodes array
+function nodeAlredyAdded(checknode: any){
+    var retval = false
+    nodes.forEach(node => {
+        if(checknode["startline"] == node["startline"] && checknode["endline"] == node["endline"]){
+            retval = true
+        }
+    });
+    return retval
+}
+
+//This function takes a line number and the assembly and creates a node from that line to the next jump instruction
+//It then returns the new node at retarray[0] and the location to jump to at retarray[1]
+//TODO: FIgure out nodeid, x, and y values
+function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
+    var currnode = "```\n"
+    var i = linenum
+    var newnode
+    var jmploc
+	var newedge: any = {}
+    console.log("curr line: " + i)
+    while(i < text.length){
+        var line = text[i]
+        console.log("currently processing this line: " + line)
+        if(line.split("")[0] == '\t' || line.split("")[0] == " "){
+            if(line.trim().split("")[0] == 'j'){
+                currnode = currnode + line + "\n```"
+                newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+                nodeid = nodeid + 1
+                workingy = workingy + 350
+                //Only parse the first node
+                console.log(line.trim().slice(0,3))
+                if(fromnode != -1){
+                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+                    edges.push(newedge)
+                    edgeid = edgeid + 1
+                }
+                if(line.trim().slice(0,3) == 'jmp'){
+                    jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim()]
+                }
+                else{
+                    jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim(),i+1]
+                }
+                i = text.length+20
+            }
+            else{
+                currnode = currnode + line + "\n"
+            }
+        }
+        else{
+            //TODO: Handle location lines
+            if(visitslocs[line.trim()] == 0){
+                currnode = currnode + line + "\n"
+                visitslocs[line.trim()] = nodeid
+            }
+            else{
+                currnode = currnode + "\n```"
+                newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+                workingy = workingy + 350
+                if(fromnode != -1){
+                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+                    edges.push(newedge)
+                    edgeid = edgeid + 1
+                    newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+                    edges.push(newedge)
+                    edgeid = edgeid + 1
+                }
+                nodeid = nodeid + 1
+                i = text.length+20
+                jmploc = "fin"
+            }
+        }
+        i = i + 1
+    }
+    //We got to the end of the assembly
+    if(i != text.length+21)
+    {
+        currnode = currnode + "```"
+        newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+        jmploc = "fin"
+        nodeid = nodeid + 1
+        workingy = workingy + 350
+        if(fromnode != -1){
+            newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+            edges.push(newedge)
+            edgeid = edgeid + 1
+        }
+    }
+    return [newnode, jmploc]
 }
