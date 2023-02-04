@@ -45,35 +45,23 @@ running `x86-create-flow-diagram` on the above codeblock would result in the fol
 
 ![Sample Graph #1](./docs/images/graph1.png)
 
-### Changing the palette
+### Plugin in practice
 
-To add colors to the palette open the plugin settings, and click the `+` button. Then use the color picker to select the color, and input a name for the color. Afterwards it will appear in the `Set color` modal. You can add as many colors as you need.
+TODO: Add GIF of running plugin
 
-![Adding a color](./docs/images/add-color-rounded.gif)
+![GIF of x86-create-flow-diagram](./docs/images/demo.gif)
 
-## Compatibility
+## Roadmap
 
-This plugin has been tested with a few other community plugins:
-
-* [Icon Folder](https://github.com/FlorianWoelki/obsidian-icon-folder)
-  * Should work out of the box, and colors should automatically be applied to the icons as well.
-* [Folder Note](https://github.com/aidenlx/folder-note-core)
-  * Will also work out of the box, however the underlines added to the files will not be colored.
-  * Personally I use the following CSS snippet locally:
-
-    ```css
-    .nav-folder.alx-folder-with-note>.nav-folder-title>.nav-folder-title-content {
-      text-decoration-style: dotted;
-      text-decoration-color: inherit;
-    }
-    ```
-    Which will make make the underline use the colors defined by this plugin. The result looks something like this:
-
-    ![Example with icons and folder notes](./docs/images/icons-notes-rounded.png)
+### TODO:
+- [ ] Add true/false labels to edges
+- [ ] Handle \`\`\` characters on both sides of selected text
+- [ ] Move nodes to left or right to increase readbility 
+- [ ] Test, test, test...
 ---
 
 <div align="center">
-  <a href="https://www.buymeacoffee.com/ecustic">
+  <a href="https://www.buymeacoffee.com/djwolfe">
     <img src="https://media2.giphy.com/media/7ssLleBvWvESbx0BuG/giphy.gif" />
   </a>
 </div>
