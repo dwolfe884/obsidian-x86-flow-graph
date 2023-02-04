@@ -45,6 +45,8 @@ running `x86-create-flow-diagram` on the above codeblock would result in the fol
 
 ![Sample Graph #1](./docs/images/graph1.png)
 
+It won't look as nice as this at first, all of the blocks will be in a single column. You'll have to drag them around to make it look pretty. I'm working on doing this a little better...
+
 ### Plugin in practice
 
 TODO: Add GIF of running plugin

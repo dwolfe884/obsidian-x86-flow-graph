@@ -1,4 +1,4 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, Vault } from 'obsidian';
+import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, Vault, Workspace } from 'obsidian';
 
 // Remember to rename these classes and interfaces!
 var nodeid = 1;
@@ -12,20 +12,9 @@ var fromnode = -1
 var locations: any = {}
 var visitslocs: any = {}
 
-interface MyPluginSettings {
-	mySetting: string;
-}
-
-const DEFAULT_SETTINGS: MyPluginSettings = {
-	mySetting: 'default'
-}
-
 export default class MyPlugin extends Plugin {
-	settings: MyPluginSettings;
 
 	async onload() {
-		await this.loadSettings();
-
 		// This adds a simple command that can be triggered anywhere
 		/*this.addCommand({
 			id: 'run-x86-parser',
@@ -101,77 +90,24 @@ export default class MyPlugin extends Plugin {
 						}
 					}
 				});
-				generatenodes(0,lines,fromnode)
-				this.app.vault.create("/pleasegod.canvas","{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
-				console.log("{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
+				generatenodes(0,lines,fromnode,"")
+				var outfile = ""
+				var currfile = this.app.workspace.getActiveFile()
+				const d = new Date();
+				if(currfile){
+					var outfile = currfile.parent.path + "/" + d.getTime() + ".canvas"
+				}
+				this.app.vault.create(outfile,"{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
 			}
 		});
 
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new SampleSettingTab(this.app, this));
-
-	}
-
-	onunload() {
-
-	}
-
-	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
 	}
 }
 
-class SampleModal extends Modal {
-	constructor(app: App) {
-		super(app);
-	}
 
-	onOpen() {
-		const {contentEl} = this;
-		contentEl.setText('Woah!');
-	}
-
-	onClose() {
-		const {contentEl} = this;
-		contentEl.empty();
-	}
-}
-
-class SampleSettingTab extends PluginSettingTab {
-	plugin: MyPlugin;
-
-	constructor(app: App, plugin: MyPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const {containerEl} = this;
-
-		containerEl.empty();
-
-		containerEl.createEl('h2', {text: 'Settings for my awesome plugin.'});
-
-		new Setting(containerEl)
-			.setName('Setting #1')
-			.setDesc('It\'s a secret')
-			.addText(text => text
-				.setPlaceholder('Enter your secret')
-				.setValue(this.plugin.settings.mySetting)
-				.onChange(async (value) => {
-					console.log('Secret: ' + value);
-					this.plugin.settings.mySetting = value;
-					await this.plugin.saveSettings();
-				}));
-	}
-}
-function generatenodes(linenum: any, text: any, fromnode: any){
+function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string){
     console.log(locations)
-    var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode)
+    var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel)
     var newnode: any = retarray[0]
 	var whereto: any = retarray[1]
 	if(newnode != null){
@@ -192,11 +128,15 @@ function generatenodes(linenum: any, text: any, fromnode: any){
     if(whereto == "fin"){
         return
     }
-    generatenodes(locations[whereto[0]], text, fromnode)
+	var edgelabel = "";
+	if(whereto.length != 1){
+		edgelabel = "false"
+	}
+    generatenodes(locations[whereto[0]], text, fromnode, edgelabel)
     if(whereto.length == 2){
         console.log("Oh boy, we at a split")
         console.log("going to line: " + whereto[1])
-        generatenodes(whereto[1], text, fromnode)
+        generatenodes(whereto[1], text, fromnode, "true")
     }
     return
 }
@@ -215,13 +155,19 @@ function nodeAlredyAdded(checknode: any){
 //This function takes a line number and the assembly and creates a node from that line to the next jump instruction
 //It then returns the new node at retarray[0] and the location to jump to at retarray[1]
 //TODO: FIgure out nodeid, x, and y values
-function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
+function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edgelabel: string) {
     var currnode = "```\n"
     var i = linenum
     var newnode
     var jmploc
 	var newedge: any = {}
-    console.log("curr line: " + i)
+	var edgecolor = ""
+	if(edgelabel == "false"){
+		edgecolor = "1"
+	}
+	else if(edgelabel == "true"){
+		edgecolor = "4"
+	}
     while(i < text.length){
         var line = text[i]
         console.log("currently processing this line: " + line)
@@ -231,10 +177,11 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
                 newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
                 nodeid = nodeid + 1
                 workingy = workingy + 350
+				workingx = workingx + 100
                 //Only parse the first node
                 console.log(line.trim().slice(0,3))
                 if(fromnode != -1){
-                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
                     edges.push(newedge)
                     edgeid = edgeid + 1
                 }
@@ -251,7 +198,6 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
             }
         }
         else{
-            //TODO: Handle location lines
             if(visitslocs[line.trim()] == 0){
                 currnode = currnode + line + "\n"
                 visitslocs[line.trim()] = nodeid
@@ -266,8 +212,9 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
 					currnode = currnode + "\n```"
 					newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
 					workingy = workingy + 350
+					workingx = workingx + 100
 					if(fromnode != -1){
-						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
 						edges.push(newedge)
 						edgeid = edgeid + 1
 						newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
@@ -291,7 +238,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any) {
         nodeid = nodeid + 1
         workingy = workingy + 350
         if(fromnode != -1){
-            newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":""}
+            newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
             edges.push(newedge)
             edgeid = edgeid + 1
         }

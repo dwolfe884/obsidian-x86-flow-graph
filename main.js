@@ -38,20 +38,10 @@ var lines = [];
 var fromnode = -1;
 var locations = {};
 var visitslocs = {};
-var DEFAULT_SETTINGS = {
-  mySetting: "default"
-};
 var MyPlugin = class extends import_obsidian.Plugin {
   async onload() {
-    await this.loadSettings();
-    const ribbonIconEl = this.addRibbonIcon("dice", "Sample Plugin", (evt) => {
-      new import_obsidian.Notice("This is a notice!");
-    });
-    ribbonIconEl.addClass("my-plugin-ribbon-class");
-    const statusBarItemEl = this.addStatusBarItem();
-    statusBarItemEl.setText("Status Bar Text");
     this.addCommand({
-      id: "create-flow-diagram",
+      id: "x86-create-flow-diagram",
       name: "Convert x86 assembly into a flow diagram on a canvas",
       editorCallback: (editor, view) => {
         console.log(editor.getSelection());
@@ -81,68 +71,21 @@ var MyPlugin = class extends import_obsidian.Plugin {
             }
           }
         });
-        generatenodes(0, lines, fromnode);
-        this.app.vault.create("/pleasegod.canvas", '{ "nodes":' + JSON.stringify(nodes) + ',"edges":' + JSON.stringify(edges) + "}");
-        console.log('{ "nodes":' + JSON.stringify(nodes) + ',"edges":' + JSON.stringify(edges) + "}");
-      }
-    });
-    this.addCommand({
-      id: "open-sample-modal-complex",
-      name: "Open sample modal (complex)",
-      checkCallback: (checking) => {
-        const markdownView = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-        if (markdownView) {
-          if (!checking) {
-            new SampleModal(this.app).open();
-          }
-          return true;
+        generatenodes(0, lines, fromnode, "");
+        var outfile = "";
+        var currfile = this.app.workspace.getActiveFile();
+        const d = new Date();
+        if (currfile) {
+          var outfile = currfile.parent.path + "/" + d.getTime() + ".canvas";
         }
+        this.app.vault.create(outfile, '{ "nodes":' + JSON.stringify(nodes) + ',"edges":' + JSON.stringify(edges) + "}");
       }
     });
-    this.addSettingTab(new SampleSettingTab(this.app, this));
-    this.registerInterval(window.setInterval(() => console.log("setInterval"), 5 * 60 * 1e3));
-  }
-  onunload() {
-  }
-  async loadSettings() {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-  }
-  async saveSettings() {
-    await this.saveData(this.settings);
   }
 };
-var SampleModal = class extends import_obsidian.Modal {
-  constructor(app) {
-    super(app);
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.setText("Woah!");
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-};
-var SampleSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Settings for my awesome plugin." });
-    new import_obsidian.Setting(containerEl).setName("Setting #1").setDesc("It's a secret").addText((text) => text.setPlaceholder("Enter your secret").setValue(this.plugin.settings.mySetting).onChange(async (value) => {
-      console.log("Secret: " + value);
-      this.plugin.settings.mySetting = value;
-      await this.plugin.saveSettings();
-    }));
-  }
-};
-function generatenodes(linenum, text, fromnode2) {
+function generatenodes(linenum, text, fromnode2, edgelabel) {
   console.log(locations);
-  var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2);
+  var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel);
   var newnode = retarray[0];
   var whereto = retarray[1];
   if (newnode != null) {
@@ -160,11 +103,15 @@ function generatenodes(linenum, text, fromnode2) {
   if (whereto == "fin") {
     return;
   }
-  generatenodes(locations[whereto[0]], text, fromnode2);
+  var edgelabel = "";
+  if (whereto.length != 1) {
+    edgelabel = "false";
+  }
+  generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
   if (whereto.length == 2) {
     console.log("Oh boy, we at a split");
     console.log("going to line: " + whereto[1]);
-    generatenodes(whereto[1], text, fromnode2);
+    generatenodes(whereto[1], text, fromnode2, "true");
   }
   return;
 }
@@ -177,13 +124,18 @@ function nodeAlredyAdded(checknode) {
   });
   return retval;
 }
-function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
+function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
   var currnode = "```\n";
   var i = linenum;
   var newnode;
   var jmploc;
   var newedge = {};
-  console.log("curr line: " + i);
+  var edgecolor = "";
+  if (edgelabel == "false") {
+    edgecolor = "1";
+  } else if (edgelabel == "true") {
+    edgecolor = "4";
+  }
   while (i < text.length) {
     var line = text[i];
     console.log("currently processing this line: " + line);
@@ -193,9 +145,10 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
         newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
         nodeid = nodeid + 1;
         workingy = workingy + 350;
+        workingx = workingx + 100;
         console.log(line.trim().slice(0, 3));
         if (fromnode2 != -1) {
-          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
           edges.push(newedge);
           edgeid = edgeid + 1;
         }
@@ -221,8 +174,9 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
           currnode = currnode + "\n```";
           newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
           workingy = workingy + 350;
+          workingx = workingx + 100;
           if (fromnode2 != -1) {
-            newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+            newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
             edges.push(newedge);
             edgeid = edgeid + 1;
             newedge = { "id": edgeid, "fromNode": nodeid, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
@@ -244,7 +198,7 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2) {
     nodeid = nodeid + 1;
     workingy = workingy + 350;
     if (fromnode2 != -1) {
-      newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
+      newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
       edges.push(newedge);
       edgeid = edgeid + 1;
     }

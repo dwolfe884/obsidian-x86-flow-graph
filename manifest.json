@@ -1,9 +1,9 @@
 {
-	"id": "obsidian-x86-coloring",
-	"name": "X86 Code Coloring",
-	"version": "0.0.1",
+	"id": "obsidian-x86-flow",
+	"name": "X86 Flow Graphing",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "An Obsidian plugin for coloring x86 code blocks",
+	"description": "An Obsidian plugin for converting x86 code blocks into ",
 	"author": "icebear",
 	"authorUrl": "https://github.com/dwolfe884",
 	"isDesktopOnly": false
