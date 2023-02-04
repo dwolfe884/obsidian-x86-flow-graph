@@ -105,13 +105,13 @@ function generatenodes(linenum, text, fromnode2, edgelabel) {
   }
   var edgelabel = "";
   if (whereto.length != 1) {
-    edgelabel = "false";
+    edgelabel = "true";
   }
   generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
   if (whereto.length == 2) {
     console.log("Oh boy, we at a split");
     console.log("going to line: " + whereto[1]);
-    generatenodes(whereto[1], text, fromnode2, "true");
+    generatenodes(whereto[1], text, fromnode2, "false");
   }
   return;
 }
