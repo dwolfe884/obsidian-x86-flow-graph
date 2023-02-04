@@ -1,15 +1,49 @@
-# Obsidian File Color
+# Obsidian X86 Flow Graph
 
-![Obsidian File Color Banner](./docs/images/hero-rounded.png)
+![Obsidian File Color Banner](./docs/images/x86.png)
 
 ## What is this?
-This is a plugin for [Obsidian](https://obsidian.md), which allows you to select colors for your files and folders in the file explorer.
+
+This is a plugin for [Obsidian](https://obsidian.md), that converts x86 assembly into a flow diagram using Obsidian Canvases
 
 ## Usage
 
-Setting the color for a file or folder is done by right clicking on the file in the file explorer and selecting `Set color`. This opens a modal where you can select all the colors defined in the plugin palette.
+This plugin adds a command called `x86-create-flow-diagram`. To use this plugin you must highlight a valid x86 code block (without the \`\`\` at the start and end) and run the command.
 
-![Setting a color](./docs/images/set-color-rounded.gif)
+This plugin requires a specific format for the assembly in order to properly generate nodes and edges for the flow graph.
+
+The key format features are as a follows:
+  
+  1. All instructions must be indeneted
+  2. Location for jumps must have no spaces before the location name
+  3. jmp instruction must be used for unconditional jumps (1 branch)
+  4. any other instruction beginning with a j is treated as a conditional jump (2 branches)
+
+This is an example of a valid x86 code block for use with this plugin
+
+```x86
+	cmp [ebp+var_8], 1
+	jz loc_401027
+	cmp [ebp+var_8], 2
+	jz loc_40103D
+	cmp [ebp+var_8], 3
+	jz loc_401053
+	jmp loc_401058
+loc_401027
+	Code for case 1
+	jmp loc_401058
+loc_40103D
+	Code for case 2
+	jmp loc_401058
+loc_401053
+	Code for case 3
+loc_401058
+	Program end
+```
+
+running `x86-create-flow-diagram` on the above codeblock would result in the following graph being produced:
+
+![Sample Graph #1](./docs/images/graph1.png)
 
 ### Changing the palette
 
