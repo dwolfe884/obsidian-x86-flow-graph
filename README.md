@@ -4,7 +4,7 @@
 
 ## What is this?
 
-This is a plugin for [Obsidian](https://obsidian.md), that converts x86 assembly into a flow diagram using Obsidian Canvases
+This is a plugin for [Obsidian](https://obsidian.md) that converts x86 assembly into a flow diagram using Obsidian Canvases
 
 ## Usage
 

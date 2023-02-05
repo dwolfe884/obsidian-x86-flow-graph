@@ -168,11 +168,13 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
         else{
 			//Have we visited this location before (0 == no) and is this not the first line of a node?
             if(visitslocs[line.trim()] == 0 && i != linenum){
+				//Close the node text and create a node object
                 currnode = currnode + "```"
 				newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
 				workingy = workingy + 300
 				workingx = workingx + (50*nodeid)
 				nodeid = nodeid + 1
+				//Set the jump location to the location name strimming away the command and comments
 				jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim()]
 				//If there is a node before the current one
 				if(fromnode != -1){
