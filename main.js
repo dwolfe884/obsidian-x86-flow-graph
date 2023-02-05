@@ -166,9 +166,8 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
           newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
           edges.push(newedge);
           edgeid = edgeid + 1;
-        } else {
-          i = text.length + 20;
         }
+        i = text.length + 20;
       } else if (visitslocs[line.trim()] == 0 && i == linenum) {
         currnode = currnode + line + "\n";
         visitslocs[line.trim()] = nodeid;

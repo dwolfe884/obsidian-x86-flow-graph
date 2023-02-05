@@ -183,11 +183,9 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 					edgeid = edgeid + 1
 				}
 				//Otherwise just leave
-				else{
-					i = text.length+20
-				}
 				//currnode = currnode + line + "\n"
                 //visitslocs[line.trim()] = nodeid
+				i = text.length+20
             }
 			//Have we visited this location before and is this the first line of a node?
 			else if(visitslocs[line.trim()] == 0 && i == linenum){
