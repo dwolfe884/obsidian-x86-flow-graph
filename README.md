@@ -51,7 +51,7 @@ It won't look as nice as this at first, all of the blocks will be in a single co
 
 TODO: Add GIF of running plugin
 
-![GIF of x86-create-flow-diagram](./docs/images/demo.gif)
+![GIF of x86-create-flow-diagram](./docs/images/demo.mp4)
 
 ## Roadmap
 
