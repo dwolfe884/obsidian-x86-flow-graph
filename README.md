@@ -49,16 +49,14 @@ It won't look as nice as this at first, all of the blocks will be in a single co
 
 ### Plugin in practice
 
-TODO: Add GIF of running plugin
-
-![GIF of x86-create-flow-diagram](./docs/images/demo.mp4)
+https://user-images.githubusercontent.com/43447026/216844597-0f27621c-f269-47f4-a5e0-7084a5444184.mp4
 
 ## Roadmap
 
 ### TODO:
 - [x] Add true/false labels to edges
-- [-] Handle \`\`\` characters on both sides of selected text
-- [-] Move nodes to left or right to increase readbility (kinda)
+- [x] Handle \`\`\` characters on both sides of selected text
+- [x] Move nodes to left or right to increase readbility (kinda)
 - [ ] Insert Link to graph below codeblock
 - [ ] Test, test, test...
 ---
