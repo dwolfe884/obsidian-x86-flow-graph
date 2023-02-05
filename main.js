@@ -44,8 +44,6 @@ var MyPlugin = class extends import_obsidian.Plugin {
       id: "x86-create-flow-diagram",
       name: "Convert x86 assembly into a flow diagram on a canvas",
       editorCallback: (editor, view) => {
-        console.log(editor.getSelection());
-        console.log(this.app.vault.getName());
         lines = [];
         nodes = [];
         nodes = [];
@@ -84,21 +82,17 @@ var MyPlugin = class extends import_obsidian.Plugin {
   }
 };
 function generatenodes(linenum, text, fromnode2, edgelabel) {
-  console.log(locations);
   var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel);
   var newnode = retarray[0];
   var whereto = retarray[1];
   if (newnode != null) {
     fromnode2 = newnode["id"];
-    console.log("fromnode is " + fromnode2);
     var wegood = nodeAlredyAdded(newnode);
     if (wegood) {
       return;
     } else {
       nodes.push(newnode);
     }
-    console.log('{ "nodes":' + JSON.stringify(nodes) + "}");
-    console.log("need to jump here: " + whereto);
   }
   if (whereto == "fin") {
     return;
@@ -109,8 +103,6 @@ function generatenodes(linenum, text, fromnode2, edgelabel) {
   }
   generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
   if (whereto.length == 2) {
-    console.log("Oh boy, we at a split");
-    console.log("going to line: " + whereto[1]);
     generatenodes(whereto[1], text, fromnode2, "false");
   }
   return;
@@ -131,22 +123,23 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
   var jmploc;
   var newedge = {};
   var edgecolor = "";
+  var side = 1;
   if (edgelabel == "false") {
     edgecolor = "1";
+    side = -1;
   } else if (edgelabel == "true") {
     edgecolor = "4";
+    side = 1;
   }
   while (i < text.length) {
     var line = text[i];
-    console.log("currently processing this line: " + line);
     if (line.split("")[0] == "	" || line.split("")[0] == " ") {
       if (line.trim().split("")[0] == "j") {
         currnode = currnode + line + "\n```";
-        newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+        newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
         nodeid = nodeid + 1;
-        workingy = workingy + 350;
-        workingx = workingx + 100;
-        console.log(line.trim().slice(0, 3));
+        workingy = workingy + 300;
+        workingx = workingx + 50 * nodeid;
         if (fromnode2 != -1) {
           newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
           edges.push(newedge);
@@ -172,9 +165,9 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
           edgeid = edgeid + 1;
         } else {
           currnode = currnode + "\n```";
-          newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
-          workingy = workingy + 350;
-          workingx = workingx + 100;
+          newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+          workingy = workingy + 300;
+          workingx = workingx + 50 * nodeid;
           if (fromnode2 != -1) {
             newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
             edges.push(newedge);

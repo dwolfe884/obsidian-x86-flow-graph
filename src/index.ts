@@ -15,66 +15,29 @@ var visitslocs: any = {}
 export default class MyPlugin extends Plugin {
 
 	async onload() {
-		// This adds a simple command that can be triggered anywhere
-		/*this.addCommand({
-			id: 'run-x86-parser',
-			name: 'Parse x86 Codeblocks',
-			callback: () => {
-				var tmp = document.getElementsByClassName("HyperMD-codeblock-begin-bg")
-			//const pre = codeBlock.parentNode as HTMLPreElement;
-			for(var i=0; i<tmp.length; i++){
-				if(tmp[i].innerHTML.contains("x86")){
-					//Find the start of an x86 codeblock
-					tmp[i].classList.add("x86-instruction")
-					var currelement = tmp[i]
-					//While we haven't found the end
-					while(!currelement.classList.value.contains("HyperMD-codeblock-end")){
-						//If we are not at the end of the page, go to the next element
-						currelement.classList.add("x86-instruction")
-						if(currelement.nextElementSibling != null){
-							currelement = currelement.nextElementSibling
-							if(currelement.classList.value.contains("HyperMD-codeblock-end")){
-								break
-							}
-						}
-						else{
-							console.log("end of document reached before end of codeblock")
-							break
-						}
-						var orightml = currelement.innerHTML
-						var innerpart = orightml.split(">")[1].split("<")[0]
-						var firstspace = innerpart.indexOf(" ")
-						var innerpart = "<span class=\"cm-hmd-codeblock x86-instruction\">" + innerpart.split(" ")[0] + "</span>" + innerpart.slice(firstspace,innerpart.length)
-						var testing = orightml.split(">")[0] + ">" + innerpart + "<" + orightml.split(">")[1].split("<")[1]
-						//console.log(testing) //need to wrap first word in class instruction
-						currelement.innerHTML = testing
-						console.log(currelement.innerHTML)
-					}
-					console.log("Done with that x86 codeblock")
-				}
-			}
-			}
-		});*/
-		// This adds an editor command that can perform some operation on the current editor instance
+		// This adds the command to take selected text and create code flow diagram
 		this.addCommand({
 			id: 'x86-create-flow-diagram',
 			name: 'Convert x86 assembly into a flow diagram on a canvas',
 			editorCallback: (editor: Editor, view: MarkdownView) => {
-				console.log(editor.getSelection());
-				console.log(this.app.vault.getName());
+				// Array of splt
 				lines = [];
 				nodes = [];
 				nodes = [];
 				edges = [];
+				// Dictionary where keys = memory locations and values = if they have been seen in a node (1) or not (0) 
 				visitslocs = {};
+				// Dictionary where keys = memory locations and values = line number
 				locations = {};
+				//NodeID's and EdgeID's must be unique for each node in a canvas
 				nodeid = 1;
 				edgeid = 5555;
 				workingx = 0;
 				workingy = 0;
 				var tmp = editor.getSelection().split("\n")
+				//For loop to remove blank lines and lines containing codeblock characters
 				tmp.forEach(element => {
-					if(element != ""){
+					if(element != "" && !element.contains("```")){
 						lines.push(element)
 					}
 				});
@@ -84,13 +47,18 @@ export default class MyPlugin extends Plugin {
 					if(line.split("")[0] != '\t' && line.split("")[0] != " "){
 						//Cut out white space and comments (#)
 						var newkey = line.trim().split("#")[0].trim()
+						//Populate locations and visits array with line numbers and all 0's
 						if (!locations[newkey]) {
 							locations[newkey] = linenum;
 							visitslocs[newkey] = 0
 						}
 					}
 				});
+				
+				//Enter recursive function
 				generatenodes(0,lines,fromnode,"")
+
+				//Get current directory to produce canvas in
 				var outfile = ""
 				var currfile = this.app.workspace.getActiveFile()
 				const d = new Date();
@@ -106,13 +74,11 @@ export default class MyPlugin extends Plugin {
 
 
 function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string){
-    console.log(locations)
     var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel)
     var newnode: any = retarray[0]
 	var whereto: any = retarray[1]
 	if(newnode != null){
 		fromnode = newnode['id']
-		console.log("fromnode is " + fromnode)
 		//Check if node is already in list
 		var wegood = nodeAlredyAdded(newnode)
 		if(wegood){
@@ -121,8 +87,6 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 		else{
 			nodes.push(newnode)
 		}
-		console.log("{ \"nodes\":"+JSON.stringify(nodes) + "}")
-		console.log("need to jump here: " + whereto)
 		//We are at the end of the file
 	}
     if(whereto == "fin"){
@@ -134,8 +98,6 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 	}
     generatenodes(locations[whereto[0]], text, fromnode, edgelabel)
     if(whereto.length == 2){
-        console.log("Oh boy, we at a split")
-        console.log("going to line: " + whereto[1])
         generatenodes(whereto[1], text, fromnode, "false")
     }
     return
@@ -162,24 +124,25 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
     var jmploc
 	var newedge: any = {}
 	var edgecolor = ""
+	var side = 1;
 	if(edgelabel == "false"){
 		edgecolor = "1"
+		side = -1
 	}
 	else if(edgelabel == "true"){
 		edgecolor = "4"
+		side = 1
 	}
     while(i < text.length){
         var line = text[i]
-        console.log("currently processing this line: " + line)
         if(line.split("")[0] == '\t' || line.split("")[0] == " "){
             if(line.trim().split("")[0] == 'j'){
                 currnode = currnode + line + "\n```"
-                newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+                newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
                 nodeid = nodeid + 1
-                workingy = workingy + 350
-				workingx = workingx + 100
+                workingy = workingy + 300
+				workingx = workingx + 50*nodeid
                 //Only parse the first node
-                console.log(line.trim().slice(0,3))
                 if(fromnode != -1){
                     newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
                     edges.push(newedge)
@@ -210,9 +173,9 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 				}
 				else{
 					currnode = currnode + "\n```"
-					newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-					workingy = workingy + 350
-					workingx = workingx + 100
+					newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+					workingy = workingy + 300
+					workingx = workingx + (50*nodeid)
 					if(fromnode != -1){
 						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
 						edges.push(newedge)
