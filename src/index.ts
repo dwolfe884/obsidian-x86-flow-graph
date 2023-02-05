@@ -54,7 +54,7 @@ export default class MyPlugin extends Plugin {
 						}
 					}
 				});
-				
+
 				//Enter recursive function
 				generatenodes(0,lines,fromnode,"")
 
@@ -87,8 +87,8 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 		else{
 			nodes.push(newnode)
 		}
-		//We are at the end of the file
 	}
+	//We are at the end of the file
     if(whereto == "fin"){
         return
     }
@@ -116,7 +116,10 @@ function nodeAlredyAdded(checknode: any){
 
 //This function takes a line number and the assembly and creates a node from that line to the next jump instruction
 //It then returns the new node at retarray[0] and the location to jump to at retarray[1]
-//TODO: FIgure out nodeid, x, and y values
+//linenum : what line to start processing on
+//text : full assembly code block
+//fromnode : nodeID of the previous node that needs to be connected via an edge (-1 if there isn't one)
+//edgelabel : "true","false", or "" to color and label the edges 
 function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edgelabel: string) {
     var currnode = "```\n"
     var i = linenum
@@ -135,6 +138,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 	}
     while(i < text.length){
         var line = text[i]
+		//If the current line is an instruction and not a location
         if(line.split("")[0] == '\t' || line.split("")[0] == " "){
             if(line.trim().split("")[0] == 'j'){
                 currnode = currnode + line + "\n```"
@@ -160,17 +164,43 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
                 currnode = currnode + line + "\n"
             }
         }
+		//Else, we're handling a location
         else{
-            if(visitslocs[line.trim()] == 0){
-                currnode = currnode + line + "\n"
-                visitslocs[line.trim()] = nodeid
+			//Have we visited this location before (0 == no) and is this not the first line of a node?
+            if(visitslocs[line.trim()] == 0 && i != linenum){
+                currnode = currnode + "```"
+				newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+				workingy = workingy + 300
+				workingx = workingx + (50*nodeid)
+				nodeid = nodeid + 1
+				jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim()]
+				//If there is a node before the current one
+				if(fromnode != -1){
+					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
+					edges.push(newedge)
+					edgeid = edgeid + 1
+				}
+				//Otherwise just leave
+				else{
+					i = text.length+20
+				}
+				//currnode = currnode + line + "\n"
+                //visitslocs[line.trim()] = nodeid
             }
+			//Have we visited this location before and is this the first line of a node?
+			else if(visitslocs[line.trim()] == 0 && i == linenum){
+				currnode = currnode + line + "\n"
+                visitslocs[line.trim()] = nodeid
+			}
+			//We have visited this before
             else{
+				//If this is an empty node, just draw a line from the previous node to the already visited one
 				if(currnode == "```\n"){
-					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":edgelabel,"color":edgecolor}
                     edges.push(newedge)
                     edgeid = edgeid + 1
 				}
+				//If it's not empty make the node and draw 2 edges
 				else{
 					currnode = currnode + "\n```"
 					newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
@@ -195,8 +225,15 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
     //We got to the end of the assembly
     if(i != text.length+21)
     {
-        currnode = currnode + "```"
-        newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
+		//If the node is empty, add a little message
+		if(currnode == "```\n"){
+			currnode = currnode + "End of assembly\n```"			
+		}
+		//Otherwise just close it
+		else{
+        	currnode = currnode + "```"
+		}
+		newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
         jmploc = "fin"
         nodeid = nodeid + 1
         workingy = workingy + 350

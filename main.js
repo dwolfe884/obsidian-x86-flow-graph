@@ -56,7 +56,7 @@ var MyPlugin = class extends import_obsidian.Plugin {
         workingy = 0;
         var tmp = editor.getSelection().split("\n");
         tmp.forEach((element) => {
-          if (element != "") {
+          if (element != "" && !element.contains("```")) {
             lines.push(element);
           }
         });
@@ -155,12 +155,26 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
         currnode = currnode + line + "\n";
       }
     } else {
-      if (visitslocs[line.trim()] == 0) {
+      if (visitslocs[line.trim()] == 0 && i != linenum) {
+        currnode = currnode + "```";
+        newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+        workingy = workingy + 300;
+        workingx = workingx + 50 * nodeid;
+        nodeid = nodeid + 1;
+        jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
+        if (fromnode2 != -1) {
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
+          edges.push(newedge);
+          edgeid = edgeid + 1;
+        } else {
+          i = text.length + 20;
+        }
+      } else if (visitslocs[line.trim()] == 0 && i == linenum) {
         currnode = currnode + line + "\n";
         visitslocs[line.trim()] = nodeid;
       } else {
         if (currnode == "```\n") {
-          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
+          newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": edgelabel, "color": edgecolor };
           edges.push(newedge);
           edgeid = edgeid + 1;
         } else {
@@ -185,7 +199,11 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
     i = i + 1;
   }
   if (i != text.length + 21) {
-    currnode = currnode + "```";
+    if (currnode == "```\n") {
+      currnode = currnode + "End of assembly\n```";
+    } else {
+      currnode = currnode + "```";
+    }
     newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
     jmploc = "fin";
     nodeid = nodeid + 1;

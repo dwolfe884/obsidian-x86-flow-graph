@@ -57,8 +57,9 @@ TODO: Add GIF of running plugin
 
 ### TODO:
 - [x] Add true/false labels to edges
-- [ ] Handle \`\`\` characters on both sides of selected text
-- [ ] Move nodes to left or right to increase readbility 
+- [-] Handle \`\`\` characters on both sides of selected text
+- [-] Move nodes to left or right to increase readbility (kinda)
+- [ ] Insert Link to graph below codeblock
 - [ ] Test, test, test...
 ---
 
