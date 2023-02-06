@@ -44,9 +44,13 @@ export default class MyPlugin extends Plugin {
 			
 				lines.forEach((line,linenum) => {
 					//Only look at lines that could be locations
-					if(line.split("")[0] != '\t' && line.split("")[0] != " "){
+					if(line[0] != '\t' && line[0] != " "){
 						//Cut out white space and comments (#)
 						var newkey = line.trim().split("#")[0].trim()
+						//Strip off ":" if they are at the end of the location string
+						if(newkey[newkey.length-1] == ":"){
+							newkey = newkey.slice(0,newkey.length-1)
+						}
 						//Populate locations and visits array with line numbers and all 0's
 						if (!locations[newkey]) {
 							locations[newkey] = linenum;
@@ -139,8 +143,8 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
     while(i < text.length){
         var line = text[i]
 		//If the current line is an instruction and not a location
-        if(line.split("")[0] == '\t' || line.split("")[0] == " "){
-            if(line.trim().split("")[0] == 'j'){
+        if(line[0] == '\t' || line[0] == " "){
+            if(line.trim()[0] == 'j'){
                 currnode = currnode + line + "\n```"
                 newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
                 nodeid = nodeid + 1
@@ -166,6 +170,10 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
         }
 		//Else, we're handling a location
         else{
+			//Remove ":" if at the end of location
+			if(line[line.length-1] == ":"){
+				line = line.slice(0,line.length-1)
+			}
 			//Have we visited this location before (0 == no) and is this not the first line of a node?
             if(visitslocs[line.trim()] == 0 && i != linenum){
 				//Close the node text and create a node object

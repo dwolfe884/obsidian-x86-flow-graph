@@ -61,8 +61,11 @@ var MyPlugin = class extends import_obsidian.Plugin {
           }
         });
         lines.forEach((line, linenum) => {
-          if (line.split("")[0] != "	" && line.split("")[0] != " ") {
+          if (line[0] != "	" && line[0] != " ") {
             var newkey = line.trim().split("#")[0].trim();
+            if (newkey[newkey.length - 1] == ":") {
+              newkey = newkey.slice(0, newkey.length - 1);
+            }
             if (!locations[newkey]) {
               locations[newkey] = linenum;
               visitslocs[newkey] = 0;
@@ -133,8 +136,8 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
   }
   while (i < text.length) {
     var line = text[i];
-    if (line.split("")[0] == "	" || line.split("")[0] == " ") {
-      if (line.trim().split("")[0] == "j") {
+    if (line[0] == "	" || line[0] == " ") {
+      if (line.trim()[0] == "j") {
         currnode = currnode + line + "\n```";
         newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
         nodeid = nodeid + 1;
@@ -155,6 +158,9 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
         currnode = currnode + line + "\n";
       }
     } else {
+      if (line[line.length - 1] == ":") {
+        line = line.slice(0, line.length - 1);
+      }
       if (visitslocs[line.trim()] == 0 && i != linenum) {
         currnode = currnode + "```";
         newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
