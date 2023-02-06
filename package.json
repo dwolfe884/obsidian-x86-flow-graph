@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-x86-flow-graph-plugin",
-	"version": "1.0.2",
+	"version": "1.2.5",
 	"description": "An Obsidian (https://obsidian.md) plugin that converts x86 assembly into a flow diagram using Obsidian Canvases",
 	"main": "main.js",
 	"scripts": {

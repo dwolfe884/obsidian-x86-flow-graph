@@ -12,7 +12,7 @@ var fromnode = -1
 var locations: any = {}
 var visitslocs: any = {}
 
-export default class MyPlugin extends Plugin {
+export default class x86_flow_graph extends Plugin {
 
 	async onload() {
 		// This adds the command to take selected text and create code flow diagram
@@ -76,7 +76,8 @@ export default class MyPlugin extends Plugin {
 	}
 }
 
-
+//Recursive function alert! Runs itself once for uncondontional jumps (jmps) and twice for conditional jumps (jz)
+//Returns when it reaches the end of the assembly section OR if it returns to a code block it's seen before 
 function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string){
     var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel)
     var newnode: any = retarray[0]
