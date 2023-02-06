@@ -66,7 +66,7 @@ var MyPlugin = class extends import_obsidian.Plugin {
             if (newkey[newkey.length - 1] == ":") {
               newkey = newkey.slice(0, newkey.length - 1);
             }
-            if (!locations[newkey]) {
+            if (!(newkey in locations)) {
               locations[newkey] = linenum;
               visitslocs[newkey] = 0;
             }
@@ -104,7 +104,7 @@ function generatenodes(linenum, text, fromnode2, edgelabel) {
   if (whereto.length != 1) {
     edgelabel = "true";
   }
-  if (!locations[whereto[0]]) {
+  if (!(whereto[0] in locations)) {
     newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * ("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1, "endline": -1 };
     workingy = workingy + 300;
     workingx = workingx + 50 * nodeid;

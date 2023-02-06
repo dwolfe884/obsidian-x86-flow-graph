@@ -52,7 +52,7 @@ export default class MyPlugin extends Plugin {
 							newkey = newkey.slice(0,newkey.length-1)
 						}
 						//Populate locations and visits array with line numbers and all 0's
-						if (!locations[newkey]) {
+						if (!(newkey in locations)) {
 							locations[newkey] = linenum;
 							visitslocs[newkey] = 0
 						}
@@ -101,7 +101,7 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 		edgelabel = "true"
 	}
 	//Error Handling for trying to jump to a non-existant location
-	if(!locations[whereto[0]]){
+	if(!(whereto[0] in locations)){
 		//Make the error node
 		newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1,"endline": -1}
 		workingy = workingy + 300
