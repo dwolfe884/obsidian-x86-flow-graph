@@ -104,7 +104,18 @@ function generatenodes(linenum, text, fromnode2, edgelabel) {
   if (whereto.length != 1) {
     edgelabel = "true";
   }
-  generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
+  if (!locations[whereto[0]]) {
+    newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * ("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1, "endline": -1 };
+    workingy = workingy + 300;
+    workingx = workingx + 50 * nodeid;
+    var newedge = { "id": edgeid, "fromNode": nodeid - 1, "fromSide": "bottom", "toNode": nodeid, "toSide": "top", "label": "" };
+    edges.push(newedge);
+    nodes.push(newnode);
+    edgeid = edgeid + 1;
+    nodeid = nodeid + 1;
+  } else {
+    generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
+  }
   if (whereto.length == 2) {
     generatenodes(whereto[1], text, fromnode2, "false");
   }

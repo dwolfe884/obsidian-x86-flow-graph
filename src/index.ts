@@ -100,10 +100,24 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 	if(whereto.length != 1){
 		edgelabel = "true"
 	}
-    generatenodes(locations[whereto[0]], text, fromnode, edgelabel)
-    if(whereto.length == 2){
-        generatenodes(whereto[1], text, fromnode, "false")
-    }
+	//Error Handling for trying to jump to a non-existant location
+	if(!locations[whereto[0]]){
+		//Make the error node
+		newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1,"endline": -1}
+		workingy = workingy + 300
+		workingx = workingx + (50*nodeid)
+		var newedge = {"id":edgeid,"fromNode":nodeid-1,"fromSide":"bottom","toNode":nodeid,"toSide":"top","label":""}
+		edges.push(newedge)
+		nodes.push(newnode)
+		edgeid = edgeid + 1
+		nodeid = nodeid + 1
+	}
+	else{
+		generatenodes(locations[whereto[0]], text, fromnode, edgelabel)
+	}
+	if(whereto.length == 2){
+		generatenodes(whereto[1], text, fromnode, "false")
+	}
     return
 }
 
@@ -144,6 +158,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
         var line = text[i]
 		//If the current line is an instruction and not a location
         if(line[0] == '\t' || line[0] == " "){
+			//If the current instruction is a jump
             if(line.trim()[0] == 'j'){
                 currnode = currnode + line + "\n```"
                 newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
@@ -190,9 +205,6 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 					edges.push(newedge)
 					edgeid = edgeid + 1
 				}
-				//Otherwise just leave
-				//currnode = currnode + line + "\n"
-                //visitslocs[line.trim()] = nodeid
 				i = text.length+20
             }
 			//Have we visited this location before and is this the first line of a node?
