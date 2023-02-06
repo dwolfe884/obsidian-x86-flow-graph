@@ -18,6 +18,7 @@ The key format features are as a follows:
   2. Location for jumps must have no spaces before the location name
   3. jmp instruction must be used for unconditional jumps (1 branch)
   4. any other instruction beginning with a j is treated as a conditional jump (2 branches)
+  5. all jump instructions must take only 1 argument and that must be the location name (jmp location1)
 
 This is an example of a valid x86 code block for use with this plugin
 
@@ -41,11 +42,11 @@ loc_401058
 	Program end
 ```
 
-running `x86-create-flow-diagram` on the above codeblock would result in the following graph being produced:
+running `x86-create-flow-diagram` on the above codeblock would result in the following graph being produced in the same directory as the current note:
 
 ![Sample Graph #1](./docs/images/graph2.png)
 
-It won't look as nice as this at first, all of the blocks will be in a single column. You'll have to drag them around to make it look pretty. I'm working on doing this a little better...
+It won't look as nice as this at first, all of the blocks will be mixed up and you'll have to drag them around to make it look pretty. I'm working on doing this a little better...
 
 ### Plugin in practice
 
@@ -61,8 +62,9 @@ https://user-images.githubusercontent.com/43447026/216844597-0f27621c-f269-47f4-
 - [ ] Test, test, test...
 ---
 
+I'm on buy meacoffee!
 <div align="center">
   <a href="https://www.buymeacoffee.com/djwolfe">
-    <img src="https://media2.giphy.com/media/7ssLleBvWvESbx0BuG/giphy.gif" />
+    <img src="https://media1.giphy.com/media/TDQOtnWgsBx99cNoyH/giphy.gif" />
   </a>
 </div>
