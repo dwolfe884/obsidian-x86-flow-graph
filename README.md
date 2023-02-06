@@ -62,7 +62,7 @@ https://user-images.githubusercontent.com/43447026/216844597-0f27621c-f269-47f4-
 - [ ] Test, test, test...
 ---
 
-I'm on buy meacoffee!
+## I'm on buy <a href="https://www.buymeacoffee.com/djwolfe">meacoffee!</a>
 <div align="center">
   <a href="https://www.buymeacoffee.com/djwolfe">
     <img src="https://media1.giphy.com/media/TDQOtnWgsBx99cNoyH/giphy.gif" />
