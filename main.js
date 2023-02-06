@@ -163,6 +163,7 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
         currnode = currnode + line + "\n";
       }
     } else {
+      line = line.trim();
       if (line[line.length - 1] == ":") {
         line = line.slice(0, line.length - 1);
       }

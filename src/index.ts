@@ -181,6 +181,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
         }
 		//Else, we're handling a location
         else{
+			line = line.trim()
 			//Remove ":" if at the end of location
 			if(line[line.length-1] == ":"){
 				line = line.slice(0,line.length-1)
