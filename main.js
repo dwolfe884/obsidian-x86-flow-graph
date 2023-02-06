@@ -24,7 +24,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var src_exports = {};
 __export(src_exports, {
-  default: () => MyPlugin
+  default: () => x86_flow_graph
 });
 module.exports = __toCommonJS(src_exports);
 var import_obsidian = require("obsidian");
@@ -38,7 +38,7 @@ var lines = [];
 var fromnode = -1;
 var locations = {};
 var visitslocs = {};
-var MyPlugin = class extends import_obsidian.Plugin {
+var x86_flow_graph = class extends import_obsidian.Plugin {
   async onload() {
     this.addCommand({
       id: "x86-create-flow-diagram",
@@ -105,14 +105,11 @@ function generatenodes(linenum, text, fromnode2, edgelabel) {
     edgelabel = "true";
   }
   if (!(whereto[0] in locations)) {
-    newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * ("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1, "endline": -1 };
-    workingy = workingy + 300;
-    workingx = workingx + 50 * nodeid;
-    var newedge = { "id": edgeid, "fromNode": nodeid - 1, "fromSide": "bottom", "toNode": nodeid, "toSide": "top", "label": "" };
+    newnode = generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1);
+    var newedge = { "id": edgeid, "fromNode": nodeid - 2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": "" };
     edges.push(newedge);
     nodes.push(newnode);
     edgeid = edgeid + 1;
-    nodeid = nodeid + 1;
   } else {
     generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
   }
@@ -150,10 +147,7 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
     if (line[0] == "	" || line[0] == " ") {
       if (line.trim()[0] == "j") {
         currnode = currnode + line + "\n```";
-        newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
-        nodeid = nodeid + 1;
-        workingy = workingy + 300;
-        workingx = workingx + 50 * nodeid;
+        newnode = generateNewNode(currnode, linenum, i, side);
         if (fromnode2 != -1) {
           newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
           edges.push(newedge);
@@ -174,10 +168,7 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
       }
       if (visitslocs[line.trim()] == 0 && i != linenum) {
         currnode = currnode + "```";
-        newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
-        workingy = workingy + 300;
-        workingx = workingx + 50 * nodeid;
-        nodeid = nodeid + 1;
+        newnode = generateNewNode(currnode, linenum, i, side);
         jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
         if (fromnode2 != -1) {
           newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
@@ -195,18 +186,15 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
           edgeid = edgeid + 1;
         } else {
           currnode = currnode + "\n```";
-          newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
-          workingy = workingy + 300;
-          workingx = workingx + 50 * nodeid;
+          newnode = generateNewNode(currnode, linenum, i, side);
           if (fromnode2 != -1) {
             newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
             edges.push(newedge);
             edgeid = edgeid + 1;
-            newedge = { "id": edgeid, "fromNode": nodeid, "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
+            newedge = { "id": edgeid, "fromNode": newnode["id"], "fromSide": "bottom", "toNode": visitslocs[line.trim()], "toSide": "top", "label": "" };
             edges.push(newedge);
             edgeid = edgeid + 1;
           }
-          nodeid = nodeid + 1;
         }
         i = text.length + 20;
         jmploc = "fin";
@@ -220,10 +208,8 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
     } else {
       currnode = currnode + "```";
     }
-    newnode = { "id": nodeid, "x": workingx, "y": workingy, "width": 550, "height": 25 * currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum, "endline": i };
+    newnode = generateNewNode(currnode, linenum, i, side);
     jmploc = "fin";
-    nodeid = nodeid + 1;
-    workingy = workingy + 350;
     if (fromnode2 != -1) {
       newedge = { "id": edgeid, "fromNode": fromnode2, "fromSide": "bottom", "toNode": newnode["id"], "toSide": "top", "label": edgelabel, "color": edgecolor };
       edges.push(newedge);
@@ -231,4 +217,11 @@ function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
     }
   }
   return [newnode, jmploc];
+}
+function generateNewNode(nodeText, startLineNum, endLineNum, side) {
+  var newnode = { "id": nodeid, "x": workingx * side, "y": workingy, "width": 550, "height": 25 * nodeText.split("\n").length, "type": "text", "text": nodeText, "startline": startLineNum, "endline": endLineNum };
+  workingy = workingy + 300;
+  workingx = workingx + 50 * nodeid;
+  nodeid = nodeid + 1;
+  return newnode;
 }

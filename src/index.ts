@@ -104,14 +104,12 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 	//Error Handling for trying to jump to a non-existant location
 	if(!(whereto[0] in locations)){
 		//Make the error node
-		newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```").split("\n").length, "type": "text", "text": "```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", "startline": -1,"endline": -1}
-		workingy = workingy + 300
-		workingx = workingx + (50*nodeid)
-		var newedge = {"id":edgeid,"fromNode":nodeid-1,"fromSide":"bottom","toNode":nodeid,"toSide":"top","label":""}
+		newnode = generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1)
+		//nodeid-2 refers to the ID of the node that generated the error
+		var newedge = {"id":edgeid,"fromNode":nodeid-2,"fromSide":"bottom","toNode":newnode['id'],"toSide":"top","label":""}
 		edges.push(newedge)
 		nodes.push(newnode)
 		edgeid = edgeid + 1
-		nodeid = nodeid + 1
 	}
 	else{
 		generatenodes(locations[whereto[0]], text, fromnode, edgelabel)
@@ -162,10 +160,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 			//If the current instruction is a jump
             if(line.trim()[0] == 'j'){
                 currnode = currnode + line + "\n```"
-                newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-                nodeid = nodeid + 1
-                workingy = workingy + 300
-				workingx = workingx + 50*nodeid
+                newnode = generateNewNode(currnode, linenum, i, side)
                 //Only parse the first node
                 if(fromnode != -1){
                     newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
@@ -194,10 +189,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
             if(visitslocs[line.trim()] == 0 && i != linenum){
 				//Close the node text and create a node object
                 currnode = currnode + "```"
-				newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-				workingy = workingy + 300
-				workingx = workingx + (50*nodeid)
-				nodeid = nodeid + 1
+				newnode = generateNewNode(currnode, linenum, i, side)
 				//Set the jump location to the location name strimming away the command and comments
 				jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim()]
 				//If there is a node before the current one
@@ -224,18 +216,17 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 				//If it's not empty make the node and draw 2 edges
 				else{
 					currnode = currnode + "\n```"
-					newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-					workingy = workingy + 300
-					workingx = workingx + (50*nodeid)
+					newnode = generateNewNode(currnode, linenum, i, side)
 					if(fromnode != -1){
+						//Draw edge from previous node to the new node
 						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
 						edges.push(newedge)
 						edgeid = edgeid + 1
-						newedge = {"id":edgeid,"fromNode":nodeid,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+						//Draw edge from new node to previously seen node
+						newedge = {"id":edgeid,"fromNode":newnode["id"],"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
 						edges.push(newedge)
 						edgeid = edgeid + 1
 					}
-					nodeid = nodeid + 1
 				}
 				i = text.length+20
                 jmploc = "fin"
@@ -254,10 +245,8 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 		else{
         	currnode = currnode + "```"
 		}
-		newnode = {"id":nodeid, "x": workingx, "y": workingy, "width": 550,"height": 25*currnode.split("\n").length, "type": "text", "text": currnode, "startline": linenum,"endline": i}
-        jmploc = "fin"
-        nodeid = nodeid + 1
-        workingy = workingy + 350
+		newnode = generateNewNode(currnode, linenum, i, side)
+		jmploc = "fin"
         if(fromnode != -1){
             newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
             edges.push(newedge)
@@ -265,4 +254,12 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
         }
     }
     return [newnode, jmploc]
+}
+
+function generateNewNode(nodeText: string, startLineNum: any, endLineNum: any, side: any){
+	var newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*nodeText.split("\n").length, "type": "text", "text": nodeText, "startline": startLineNum,"endline": endLineNum}
+	workingy = workingy + 300
+	workingx = workingx + (50*nodeid)
+	nodeid = nodeid + 1
+	return newnode
 }
