@@ -106,7 +106,7 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 		//Make the error node
 		newnode = generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1)
 		//nodeid-2 refers to the ID of the node that generated the error
-		var newedge = {"id":edgeid,"fromNode":nodeid-2,"fromSide":"bottom","toNode":newnode['id'],"toSide":"top","label":""}
+		var newedge = {"id":edgeid,"fromNode":nodeid-2,"fromSide":"bottom","toNode":newnode['id'],"toSide":"top","label":"true", "color":"4"}
 		edges.push(newedge)
 		nodes.push(newnode)
 		edgeid = edgeid + 1
