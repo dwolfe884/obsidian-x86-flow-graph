@@ -1,7 +1,7 @@
 {
 	"id": "x86-flow-graphing",
 	"name": "x86 Assembly Flow Graphing",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "1.1.0",
 	"description": "An Obsidian plugin for converting x86 code blocks into flow graphs",
 	"author": "icebear",
