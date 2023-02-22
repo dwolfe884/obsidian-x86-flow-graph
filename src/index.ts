@@ -1,20 +1,23 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting, Vault, Workspace } from 'obsidian';
+import { CanvasTextData, CanvasColor, NodeSide, CanvasEdgeData, CanvasData } from 'obsidian/canvas';
+import * as internal from 'stream';
 
-// Remember to rename these classes and interfaces!
-var nodeid = 1;
-var edgeid = 5555
-var workingx = 0;
-var workingy = 0;
-var nodes: any[] = []
-var edges: { id: number; fromNode: any; fromSide: string; toNode: number; toSide: string; label: string; }[] = [] //{"id":"d1e0d15da69178a9","fromNode":"4018052da21dde12","fromSide":"bottom","toNode":"0afaa4e14a75cfe1","toSide":"top","label":"false"}
-var lines: string[] = []
-var fromnode = -1
-var locations: any = {}
-var visitslocs: any = {}
+let nodeid = 1;
+let edgeid = 5555
+let workingx = 0;
+let workingy = 0;
+let nodes: any[] = []
+let edges: CanvasEdgeData[] = [] //{"id":"d1e0d15da69178a9","fromNode":"4018052da21dde12","fromSide":"bottom","toNode":"0afaa4e14a75cfe1","toSide":"top","label":"false"}
+let lines: string[] = []
+let fromnode = -1
+let locations: any = {}
+let visitslocs: any = {}
+let colorGreen: CanvasColor = "4"
+let colorRed: CanvasColor = "1"
 
 export default class x86_flow_graph extends Plugin {
 
-	async onload() {
+	async onload(){
 		// This adds the command to take selected text and create code flow diagram
 		this.addCommand({
 			id: 'x86-create-flow-diagram',
@@ -34,7 +37,7 @@ export default class x86_flow_graph extends Plugin {
 				edgeid = 5555;
 				workingx = 0;
 				workingy = 0;
-				var tmp = editor.getSelection().split("\n")
+				const tmp = editor.getSelection().split("\n")
 				//For loop to remove blank lines and lines containing codeblock characters
 				tmp.forEach(element => {
 					if(element != "" && !element.contains("```")){
@@ -46,7 +49,7 @@ export default class x86_flow_graph extends Plugin {
 					//Only look at lines that could be locations
 					if(line[0] != '\t' && line[0] != " "){
 						//Cut out white space and comments (#)
-						var newkey = line.trim().split("#")[0].trim()
+						let newkey = line.trim().split("#")[0].trim()
 						//Strip off ":" if they are at the end of the location string
 						if(newkey[newkey.length-1] == ":"){
 							newkey = newkey.slice(0,newkey.length-1)
@@ -63,13 +66,14 @@ export default class x86_flow_graph extends Plugin {
 				generatenodes(0,lines,fromnode,"")
 
 				//Get current directory to produce canvas in
-				var outfile = ""
-				var currfile = this.app.workspace.getActiveFile()
+				let outfile = ""
+				const currfile = this.app.workspace.getActiveFile()
 				const d = new Date();
 				if(currfile){
-					var outfile = currfile.parent.path + "/" + d.getTime() + ".canvas"
+					outfile = currfile.parent.path + "/" + d.getTime() + ".canvas"
 				}
-				this.app.vault.create(outfile,"{ \"nodes\":"+JSON.stringify(nodes) + ",\"edges\":" + JSON.stringify(edges) + "}")
+				let finalCanvas: CanvasData = {nodes: nodes, edges: edges}
+				this.app.vault.create(outfile,JSON.stringify(finalCanvas))
 			}
 		});
 
@@ -79,13 +83,13 @@ export default class x86_flow_graph extends Plugin {
 //Recursive function alert! Runs itself once for uncondontional jumps (jmps) and twice for conditional jumps (jz)
 //Returns when it reaches the end of the assembly section OR if it returns to a code block it's seen before 
 function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string){
-    var retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel)
-    var newnode: any = retarray[0]
-	var whereto: any = retarray[1]
+    const retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel)
+    let newnode: any = retarray[0]
+	let whereto: any = retarray[1]
 	if(newnode != null){
 		fromnode = newnode['id']
 		//Check if node is already in list
-		var wegood = nodeAlredyAdded(newnode)
+		const wegood = nodeAlredyAdded(newnode)
 		if(wegood){
 			return
 		}
@@ -97,7 +101,7 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
     if(whereto == "fin"){
         return
     }
-	var edgelabel = "";
+	edgelabel = "";
 	if(whereto.length != 1){
 		edgelabel = "true"
 	}
@@ -106,7 +110,7 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 		//Make the error node
 		newnode = generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1)
 		//nodeid-2 refers to the ID of the node that generated the error
-		var newedge = {"id":edgeid,"fromNode":nodeid-2,"fromSide":"bottom","toNode":newnode['id'],"toSide":"top","label":"true", "color":"4"}
+		const newedge: CanvasEdgeData = {id:edgeid.toString(),fromNode:(nodeid-2).toString(),fromSide:"bottom",toNode:newnode['id'],toSide:"top",label:"true", color:colorGreen}
 		edges.push(newedge)
 		nodes.push(newnode)
 		edgeid = edgeid + 1
@@ -122,7 +126,7 @@ function generatenodes(linenum: any, text: any, fromnode: any, edgelabel: string
 
 //This function returns true if the node has already been added to the nodes array
 function nodeAlredyAdded(checknode: any){
-    var retval = false
+    let retval = false
     nodes.forEach(node => {
         if(checknode["startline"] == node["startline"] && checknode["endline"] == node["endline"]){
             retval = true
@@ -138,13 +142,13 @@ function nodeAlredyAdded(checknode: any){
 //fromnode : nodeID of the previous node that needs to be connected via an edge (-1 if there isn't one)
 //edgelabel : "true","false", or "" to color and label the edges 
 function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edgelabel: string) {
-    var currnode = "```\n"
-    var i = linenum
-    var newnode
-    var jmploc
-	var newedge: any = {}
-	var edgecolor = ""
-	var side = 1;
+    let currnode = "```\n"
+    let i = linenum
+    let newnode
+    let jmploc
+	let newedge: CanvasEdgeData
+	let edgecolor = ""
+	let side = 1;
 	if(edgelabel == "false"){
 		edgecolor = "1"
 		side = -1
@@ -154,7 +158,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 		side = 1
 	}
     while(i < text.length){
-        var line = text[i]
+        let line = text[i]
 		//If the current line is an instruction and not a location
         if(line[0] == '\t' || line[0] == " "){
 			//If the current instruction is a jump
@@ -163,7 +167,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
                 newnode = generateNewNode(currnode, linenum, i, side)
                 //Only parse the first node
                 if(fromnode != -1){
-                    newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
+                    newedge = {id:edgeid.toString(),fromNode:fromnode.toString(),fromSide:"bottom",toNode:newnode["id"],toSide:"top",label:edgelabel, color:edgecolor}
                     edges.push(newedge)
                     edgeid = edgeid + 1
                 }
@@ -195,7 +199,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 				jmploc = [line.trim().slice(line.trim().indexOf(" ")+1,line.length).split("#")[0].trim()]
 				//If there is a node before the current one
 				if(fromnode != -1){
-					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
+					newedge = {id:edgeid.toString(),fromNode:fromnode.toString(),fromSide:"bottom",toNode:newnode["id"].toString(),toSide:"top",label:edgelabel,color:edgecolor}
 					edges.push(newedge)
 					edgeid = edgeid + 1
 				}
@@ -210,7 +214,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
             else{
 				//If this is an empty node, just draw a line from the previous node to the already visited one
 				if(currnode == "```\n"){
-					newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":edgelabel,"color":edgecolor}
+					newedge = {id:edgeid.toString(),fromNode:fromnode.toString(),fromSide:"bottom",toNode:visitslocs[line.trim()].toString(),toSide:"top",label:edgelabel,color:edgecolor}
                     edges.push(newedge)
                     edgeid = edgeid + 1
 				}
@@ -220,11 +224,11 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 					newnode = generateNewNode(currnode, linenum, i, side)
 					if(fromnode != -1){
 						//Draw edge from previous node to the new node
-						newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel,"color":edgecolor}
+						newedge = {id:edgeid.toString(),fromNode:fromnode.toString(),fromSide:"bottom",toNode:newnode["id"].toString(),toSide:"top",label:edgelabel,color:edgecolor}
 						edges.push(newedge)
 						edgeid = edgeid + 1
 						//Draw edge from new node to previously seen node
-						newedge = {"id":edgeid,"fromNode":newnode["id"],"fromSide":"bottom","toNode":visitslocs[line.trim()],"toSide":"top","label":""}
+						newedge = {id:edgeid.toString(),fromNode:newnode["id"].toString(),fromSide:"bottom",toNode:visitslocs[line.trim()].toString(),toSide:"top",label:""}
 						edges.push(newedge)
 						edgeid = edgeid + 1
 					}
@@ -249,7 +253,7 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 		newnode = generateNewNode(currnode, linenum, i, side)
 		jmploc = "fin"
         if(fromnode != -1){
-            newedge = {"id":edgeid,"fromNode":fromnode,"fromSide":"bottom","toNode":newnode["id"],"toSide":"top","label":edgelabel, "color":edgecolor}
+            newedge = {id:edgeid.toString(),fromNode:fromnode.toString(),fromSide:"bottom",toNode:newnode["id"].toString(),toSide:"top",label:edgelabel, color:edgecolor}
             edges.push(newedge)
             edgeid = edgeid + 1
         }
@@ -258,9 +262,27 @@ function MakeNodeFromLineToNextJump(linenum: any, text: any, fromnode: any, edge
 }
 
 function generateNewNode(nodeText: string, startLineNum: any, endLineNum: any, side: any){
-	var newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*nodeText.split("\n").length, "type": "text", "text": nodeText, "startline": startLineNum,"endline": endLineNum}
+	//const newnode = {"id":nodeid, "x": workingx*side, "y": workingy, "width": 550,"height": 25*nodeText.split("\n").length, "type": "text", "text": nodeText, "startline": startLineNum,"endline": endLineNum}
+	const newnode: x86Node = {
+		type: 'text',
+		id: nodeid.toString(),
+		x: workingx*side,
+		y: workingy,
+		width: 550,
+		height: 35*nodeText.split("\n").length,
+		text: nodeText,
+		startline: startLineNum,
+		endline: endLineNum
+	  };
+	  
 	workingy = workingy + 300
 	workingx = workingx + (50*nodeid)
 	nodeid = nodeid + 1
 	return newnode
+}
+
+//Extending CanvasNodeData to add attributes for detecting repeated blocks of code
+interface x86Node extends CanvasTextData{
+	startline: number,
+	endline: number
 }
