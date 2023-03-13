@@ -28,213 +28,216 @@ __export(src_exports, {
 });
 module.exports = __toCommonJS(src_exports);
 var import_obsidian = require("obsidian");
-var nodeid = 1;
-var edgeid = 5555;
-var workingx = 0;
-var workingy = 0;
-var nodes = [];
-var edges = [];
-var lines = [];
-var fromnode = -1;
-var locations = {};
-var visitslocs = {};
-var colorGreen = "4";
 var x86_flow_graph = class extends import_obsidian.Plugin {
+  constructor() {
+    super(...arguments);
+    this.nodeid = 1;
+    this.edgeid = 5555;
+    this.workingx = 0;
+    this.workingy = 0;
+    this.nodes = [];
+    this.edges = [];
+    this.lines = [];
+    this.fromnode = -1;
+    this.locations = {};
+    this.visitslocs = {};
+    this.colorGreen = "4";
+    this.colorRed = "1";
+  }
   async onload() {
     this.addCommand({
       id: "x86-create-flow-diagram",
       name: "Convert x86 assembly into a flow diagram on a canvas",
       editorCallback: (editor, view) => {
-        lines = [];
-        nodes = [];
-        nodes = [];
-        edges = [];
-        visitslocs = {};
-        locations = {};
-        nodeid = 1;
-        edgeid = 5555;
-        workingx = 0;
-        workingy = 0;
+        this.lines = [];
+        this.nodes = [];
+        this.edges = [];
+        this.visitslocs = {};
+        this.locations = {};
+        this.nodeid = 1;
+        this.edgeid = 5555;
+        this.workingx = 0;
+        this.workingy = 0;
         const tmp = editor.getSelection().split("\n");
         tmp.forEach((element) => {
           if (element != "" && !element.contains("```")) {
-            lines.push(element);
+            this.lines.push(element);
           }
         });
-        lines.forEach((line, linenum) => {
+        this.lines.forEach((line, linenum) => {
           if (line[0] != "	" && line[0] != " ") {
             let newkey = line.trim().split("#")[0].trim();
             if (newkey[newkey.length - 1] == ":") {
               newkey = newkey.slice(0, newkey.length - 1);
             }
-            if (!(newkey in locations)) {
-              locations[newkey] = linenum;
-              visitslocs[newkey] = 0;
+            if (!(newkey in this.locations)) {
+              this.locations[newkey] = linenum;
+              this.visitslocs[newkey] = 0;
             }
           }
         });
-        generatenodes(0, lines, fromnode, "");
+        this.generatenodes(0, this.lines, this.fromnode, "");
         let outfile = "";
         const currfile = this.app.workspace.getActiveFile();
         const d = new Date();
         if (currfile) {
           outfile = currfile.parent.path + "/" + d.getTime() + ".canvas";
         }
-        let finalCanvas = { nodes, edges };
+        let finalCanvas = { nodes: this.nodes, edges: this.edges };
         this.app.vault.create(outfile, JSON.stringify(finalCanvas));
       }
     });
   }
-};
-function generatenodes(linenum, text, fromnode2, edgelabel) {
-  const retarray = MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel);
-  let newnode = retarray[0];
-  let whereto = retarray[1];
-  if (newnode != null) {
-    fromnode2 = newnode["id"];
-    const wegood = nodeAlredyAdded(newnode);
-    if (wegood) {
-      return;
-    } else {
-      nodes.push(newnode);
+  generatenodes(linenum, text, fromnode, edgelabel) {
+    const retarray = this.MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel);
+    let newnode = retarray[0];
+    let whereto = retarray[1];
+    if (newnode != null) {
+      fromnode = newnode["id"];
+      const wegood = this.nodeAlredyAdded(newnode);
+      if (wegood) {
+        return;
+      } else {
+        this.nodes.push(newnode);
+      }
     }
-  }
-  if (whereto == "fin") {
+    if (whereto == "fin") {
+      return;
+    }
+    edgelabel = "";
+    if (whereto.length != 1) {
+      edgelabel = "true";
+    }
+    if (!(whereto[0] in this.locations)) {
+      newnode = this.generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1);
+      const newedge = { id: this.edgeid.toString(), fromNode: this.nodes[this.nodes.length - 1].id.toString().toString(), fromSide: "bottom", toNode: newnode["id"], toSide: "top", label: "true", color: this.colorGreen };
+      this.edges.push(newedge);
+      this.nodes.push(newnode);
+      this.edgeid = this.edgeid + 1;
+    } else {
+      this.generatenodes(this.locations[whereto[0]], text, fromnode, edgelabel);
+    }
+    if (whereto.length == 2) {
+      this.generatenodes(whereto[1], text, fromnode, "false");
+    }
     return;
   }
-  edgelabel = "";
-  if (whereto.length != 1) {
-    edgelabel = "true";
+  nodeAlredyAdded(checknode) {
+    let retval = false;
+    this.nodes.forEach((node) => {
+      if (checknode["startline"] == node["startline"] && checknode["endline"] == node["endline"]) {
+        retval = true;
+      }
+    });
+    return retval;
   }
-  if (!(whereto[0] in locations)) {
-    newnode = generateNewNode("```\nERROR: Jumping to non-existant\nlocation " + whereto[0].trim() + "\n```", -1, -1, 1);
-    const newedge = { id: edgeid.toString(), fromNode: (nodeid - 2).toString(), fromSide: "bottom", toNode: newnode["id"], toSide: "top", label: "true", color: colorGreen };
-    edges.push(newedge);
-    nodes.push(newnode);
-    edgeid = edgeid + 1;
-  } else {
-    generatenodes(locations[whereto[0]], text, fromnode2, edgelabel);
-  }
-  if (whereto.length == 2) {
-    generatenodes(whereto[1], text, fromnode2, "false");
-  }
-  return;
-}
-function nodeAlredyAdded(checknode) {
-  let retval = false;
-  nodes.forEach((node) => {
-    if (checknode["startline"] == node["startline"] && checknode["endline"] == node["endline"]) {
-      retval = true;
+  MakeNodeFromLineToNextJump(linenum, text, fromnode, edgelabel) {
+    let currnode = "```\n";
+    let i = linenum;
+    let newnode;
+    let jmploc;
+    let newedge;
+    let edgecolor = "";
+    let side = 1;
+    if (edgelabel == "false") {
+      edgecolor = "1";
+      side = -1;
+    } else if (edgelabel == "true") {
+      edgecolor = "4";
+      side = 1;
     }
-  });
-  return retval;
-}
-function MakeNodeFromLineToNextJump(linenum, text, fromnode2, edgelabel) {
-  let currnode = "```\n";
-  let i = linenum;
-  let newnode;
-  let jmploc;
-  let newedge;
-  let edgecolor = "";
-  let side = 1;
-  if (edgelabel == "false") {
-    edgecolor = "1";
-    side = -1;
-  } else if (edgelabel == "true") {
-    edgecolor = "4";
-    side = 1;
-  }
-  while (i < text.length) {
-    let line = text[i];
-    if (line[0] == "	" || line[0] == " ") {
-      if (line.trim()[0] == "j") {
-        currnode = currnode + line + "\n```";
-        newnode = generateNewNode(currnode, linenum, i, side);
-        if (fromnode2 != -1) {
-          newedge = { id: edgeid.toString(), fromNode: fromnode2.toString(), fromSide: "bottom", toNode: newnode["id"], toSide: "top", label: edgelabel, color: edgecolor };
-          edges.push(newedge);
-          edgeid = edgeid + 1;
-        }
-        if (line.trim().slice(0, 3) == "jmp") {
-          jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
-        } else {
-          jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim(), i + 1];
-        }
-        i = text.length + 20;
-      } else {
-        currnode = currnode + line + "\n";
-      }
-    } else {
-      line = line.trim();
-      if (line[line.length - 1] == ":") {
-        line = line.slice(0, line.length - 1);
-      }
-      if (visitslocs[line.trim()] == 0 && i != linenum) {
-        currnode = currnode + "```";
-        newnode = generateNewNode(currnode, linenum, i, side);
-        jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
-        if (fromnode2 != -1) {
-          newedge = { id: edgeid.toString(), fromNode: fromnode2.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
-          edges.push(newedge);
-          edgeid = edgeid + 1;
-        }
-        i = text.length + 20;
-      } else if (visitslocs[line.trim()] == 0 && i == linenum) {
-        currnode = currnode + line + "\n";
-        visitslocs[line.trim()] = nodeid;
-      } else {
-        if (currnode == "```\n") {
-          newedge = { id: edgeid.toString(), fromNode: fromnode2.toString(), fromSide: "bottom", toNode: visitslocs[line.trim()].toString(), toSide: "top", label: edgelabel, color: edgecolor };
-          edges.push(newedge);
-          edgeid = edgeid + 1;
-        } else {
-          currnode = currnode + "\n```";
-          newnode = generateNewNode(currnode, linenum, i, side);
-          if (fromnode2 != -1) {
-            newedge = { id: edgeid.toString(), fromNode: fromnode2.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
-            edges.push(newedge);
-            edgeid = edgeid + 1;
-            newedge = { id: edgeid.toString(), fromNode: newnode["id"].toString(), fromSide: "bottom", toNode: visitslocs[line.trim()].toString(), toSide: "top", label: "" };
-            edges.push(newedge);
-            edgeid = edgeid + 1;
+    while (i < text.length) {
+      let line = text[i];
+      if (line[0] == "	" || line[0] == " ") {
+        if (line.trim()[0] == "j") {
+          currnode = currnode + line + "\n```";
+          newnode = this.generateNewNode(currnode, linenum, i, side);
+          if (fromnode != -1) {
+            newedge = { id: this.edgeid.toString(), fromNode: fromnode.toString(), fromSide: "bottom", toNode: newnode["id"], toSide: "top", label: edgelabel, color: edgecolor };
+            this.edges.push(newedge);
+            this.edgeid = this.edgeid + 1;
           }
+          if (line.trim().slice(0, 3) == "jmp") {
+            jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
+          } else {
+            jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim(), i + 1];
+          }
+          i = text.length + 20;
+        } else {
+          currnode = currnode + line + "\n";
         }
-        i = text.length + 20;
-        jmploc = "fin";
+      } else {
+        line = line.trim();
+        if (line[line.length - 1] == ":") {
+          line = line.slice(0, line.length - 1);
+        }
+        if (this.visitslocs[line.trim()] == 0 && i != linenum) {
+          currnode = currnode + "```";
+          newnode = this.generateNewNode(currnode, linenum, i, side);
+          jmploc = [line.trim().slice(line.trim().indexOf(" ") + 1, line.length).split("#")[0].trim()];
+          if (fromnode != -1) {
+            newedge = { id: this.edgeid.toString(), fromNode: fromnode.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
+            this.edges.push(newedge);
+            this.edgeid = this.edgeid + 1;
+          }
+          i = text.length + 20;
+        } else if (this.visitslocs[line.trim()] == 0 && i == linenum) {
+          currnode = currnode + line + "\n";
+          this.visitslocs[line.trim()] = this.nodeid;
+        } else {
+          if (currnode == "```\n") {
+            newedge = { id: this.edgeid.toString(), fromNode: fromnode.toString(), fromSide: "bottom", toNode: this.visitslocs[line.trim()].toString(), toSide: "top", label: edgelabel, color: edgecolor };
+            this.edges.push(newedge);
+            this.edgeid = this.edgeid + 1;
+          } else {
+            currnode = currnode + "\n```";
+            newnode = this.generateNewNode(currnode, linenum, i, side);
+            if (fromnode != -1) {
+              newedge = { id: this.edgeid.toString(), fromNode: fromnode.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
+              this.edges.push(newedge);
+              this.edgeid = this.edgeid + 1;
+              newedge = { id: this.edgeid.toString(), fromNode: newnode["id"].toString(), fromSide: "bottom", toNode: this.visitslocs[line.trim()].toString(), toSide: "top", label: "" };
+              this.edges.push(newedge);
+              this.edgeid = this.edgeid + 1;
+            }
+          }
+          i = text.length + 20;
+          jmploc = "fin";
+        }
+      }
+      i = i + 1;
+    }
+    if (i != text.length + 21) {
+      if (currnode == "```\n") {
+        currnode = currnode + "End of assembly\n```";
+      } else {
+        currnode = currnode + "```";
+      }
+      newnode = this.generateNewNode(currnode, linenum, i, side);
+      jmploc = "fin";
+      if (fromnode != -1) {
+        newedge = { id: this.edgeid.toString(), fromNode: fromnode.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
+        this.edges.push(newedge);
+        this.edgeid = this.edgeid + 1;
       }
     }
-    i = i + 1;
+    return [newnode, jmploc];
   }
-  if (i != text.length + 21) {
-    if (currnode == "```\n") {
-      currnode = currnode + "End of assembly\n```";
-    } else {
-      currnode = currnode + "```";
-    }
-    newnode = generateNewNode(currnode, linenum, i, side);
-    jmploc = "fin";
-    if (fromnode2 != -1) {
-      newedge = { id: edgeid.toString(), fromNode: fromnode2.toString(), fromSide: "bottom", toNode: newnode["id"].toString(), toSide: "top", label: edgelabel, color: edgecolor };
-      edges.push(newedge);
-      edgeid = edgeid + 1;
-    }
+  generateNewNode(nodeText, startLineNum, endLineNum, side) {
+    const newnode = {
+      type: "text",
+      id: this.nodeid.toString(),
+      x: this.workingx * side,
+      y: this.workingy,
+      width: 550,
+      height: 35 * nodeText.split("\n").length,
+      text: nodeText,
+      startline: startLineNum,
+      endline: endLineNum
+    };
+    this.workingy = this.workingy + 300;
+    this.workingx = this.workingx + 50 * this.nodeid;
+    this.nodeid = this.nodeid + 1;
+    return newnode;
   }
-  return [newnode, jmploc];
-}
-function generateNewNode(nodeText, startLineNum, endLineNum, side) {
-  const newnode = {
-    type: "text",
-    id: nodeid.toString(),
-    x: workingx * side,
-    y: workingy,
-    width: 550,
-    height: 35 * nodeText.split("\n").length,
-    text: nodeText,
-    startline: startLineNum,
-    endline: endLineNum
-  };
-  workingy = workingy + 300;
-  workingx = workingx + 50 * nodeid;
-  nodeid = nodeid + 1;
-  return newnode;
-}
+};
